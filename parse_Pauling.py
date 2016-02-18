@@ -14,8 +14,8 @@ if __name__ == '__main__':
     # for doc in db['pauling_file_unique'].find().limit(1000):
     #     db['pauling_file_unique_Parse'].insert(doc)
     # db['pauling_file_unique'].aggregate([{'$out': 'pauling_file_unique_Parse'}])
-    d = 146212
-    for doc in db['pauling_file_unique_Parse'].find().skip(146212).batch_size(50):
+    d = 146519
+    for doc in db['pauling_file_unique_Parse'].find().skip(146519).batch_size(50):
         d += 1
         print 'On record # {}'.format(d)
         ###########
