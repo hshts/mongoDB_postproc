@@ -29,12 +29,22 @@ if __name__ == '__main__':
         #                   authors=['Saurabh Bajaj <sbajaj@lbl.gov>', 'Anubhav Jain <ajain@lbl.gov>'])//div[@id="general_information"]
 
         parsed_body = html.fromstring(doc['webpage_str'])
-        for i in parsed_body.xpath('//strong[@class="data-list__item-key"]/text()'):
+        y = 0
+        for i in parsed_body.xpath('//div[@class="general_information"]/div/div/div/ul/li/strong[@class="data-list__item-key"]/text()'):
+            y += 1
             field = i.strip()
             if field.endswith(':'):
                 print field[:-1]
             else:
                 print field
+        print 'Total # of keys  = {}'.format(y)
+        # print len(parsed_body.xpath('//strong[@class="data-list__item-key"]/text()'))
+        # print len(parsed_body.xpath('//span[@class="data-list__item-value"]/text()'))
+        x = 0
+        for i in parsed_body.xpath('//span[@class="data-list__item-value"]'):
+            x += 1
+            print i.text_content().strip()
+        print 'Total # of values  = {}'.format(x)
 
         # for a_link in parsed_body.xpath('//a/@href'):
         #     if '.cif' in a_link:
