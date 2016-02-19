@@ -39,6 +39,12 @@ if __name__ == '__main__':
         geninfo_dict['ref'] = reference_dict
         '''
         ############
+        if 'cif_string_new' in doc:
+            db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                                   {'$rename': {'cif_string': 'metadata._Springer.cif_string_old'}})
+            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$rename': {'cif_string_new': 'cif_string'}})
+            print 'MOVING cif_string field DONE!'
+        ############
         expdetails = soup.find('div', {'id': 'experimentalDetails'}).find('div', 'accordion__bd')
         exptables = expdetails.findAll('table')
         exptables_dict = {}
@@ -48,7 +54,9 @@ if __name__ == '__main__':
                          for tr in trs}
             exptables_dict.update(expfields)
         ############
-        db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'metadata._Springer.expdetails': exptables_dict}}, upsert=False)
+        db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                               {'$set': {'metadata._Springer.expdetails': exptables_dict}},
+                                               upsert=False)
         '''
         db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
             '$set': {'metadata._Springer.geninfo': geninfo_dict, 'metadata._Springer.expdetails': exptables_dict}},
