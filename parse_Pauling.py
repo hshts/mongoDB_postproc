@@ -14,8 +14,9 @@ if __name__ == '__main__':
     # for doc in db['pauling_file_unique'].find().limit(1000):
     #     db['pauling_file_unique_Parse'].insert(doc)
     # db['pauling_file_unique'].aggregate([{'$out': 'pauling_file_unique_Parse'}])
-    d = 146519
-    for doc in db['pauling_file_unique_Parse'].find().skip(146519).batch_size(50):
+    # db['pauling_file_unique_Parse'].ensure_index("key", unique=True)
+    d = 168938
+    for doc in db['pauling_file_unique_Parse'].find().skip(d).batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
         ###########
@@ -35,8 +36,6 @@ if __name__ == '__main__':
         reference_dict = {'html': refsoup.prettify(),
                           'text': ''.join([(str(item.encode('utf-8'))).strip() for item in refsoup.contents])}
         geninfo_dict['ref'] = reference_dict
-        # db['pauling_file_unique_Parse'].update({'key': doc['key']},
-        #                                        {'$set': {'metadata._Springer.geninfo': geninfo_dict}}, upsert=False)
         ############
         expdetails = soup.find('div', {'id': 'experimentalDetails'}).find('div', 'accordion__bd')
         exptables = expdetails.findAll('table')
@@ -103,7 +102,4 @@ if __name__ == '__main__':
             print 'Structure already parsed for ' + doc['key']
         print '#####################################'
         ##############
-        # for u in db['pauling_file_unique_Parse'].find({'key': doc['key']}):
-        #     print u['metadata']['_Springer']['geninfo'].keys()
-        #     print u['metadata']['_Springer']['expdetails'].keys()
     print 'FINISHED! Total number of unparsable SD_IDs are: ' + str(db['unparsable_sds'].find().count())
