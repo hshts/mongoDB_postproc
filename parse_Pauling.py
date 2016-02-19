@@ -15,12 +15,13 @@ if __name__ == '__main__':
     #     db['pauling_file_unique_Parse'].insert(doc)
     # db['pauling_file_unique'].aggregate([{'$out': 'pauling_file_unique_Parse'}])
     # db['pauling_file_unique_Parse'].ensure_index("key", unique=True)
-    d = 168938
-    for doc in db['pauling_file_unique_Parse'].find().skip(d).batch_size(75):
+    d = 0
+    for doc in db['pauling_file_unique_Parse'].find().batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
         ###########
         soup = BeautifulSoup(doc['webpage_str'], 'lxml')
+        '''
         geninfo = soup.find('div', {'id': 'general_information'})
         geninfo_text = geninfo.get_text()
         lines = (line.strip() for line in geninfo_text.splitlines())
@@ -36,19 +37,23 @@ if __name__ == '__main__':
         reference_dict = {'html': refsoup.prettify(),
                           'text': ''.join([(str(item.encode('utf-8'))).strip() for item in refsoup.contents])}
         geninfo_dict['ref'] = reference_dict
+        '''
         ############
         expdetails = soup.find('div', {'id': 'experimentalDetails'}).find('div', 'accordion__bd')
         exptables = expdetails.findAll('table')
         exptables_dict = {}
         for table in exptables:
             trs = table.findAll('tr')
-            expfields = {tr.findAll('td')[0].string.strip(): tr.findAll('td')[1].find('ul').find('li').encode('utf-8')
+            expfields = {tr.findAll('td')[0].string.strip(): tr.findAll('td')[1].find('ul').find('li').text.strip()
                          for tr in trs}
             exptables_dict.update(expfields)
         ############
+        db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'metadata._Springer.expdetails': exptables_dict}}, upsert=False)
+        '''
         db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
             '$set': {'metadata._Springer.geninfo': geninfo_dict, 'metadata._Springer.expdetails': exptables_dict}},
                                                upsert=False)
+        '''
         print 'Checking structure for ' + doc['key']
         if 'structure' not in doc:
             print '"structure" key not in this doc'
