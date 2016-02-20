@@ -9,6 +9,24 @@ db = client.springer
 
 if __name__ == '__main__':
     d = 0
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).limit(3):
+        for parsed_doc in db['pauling_file_unique_Parse'].find({'key': unparsable_doc['key']}):
+            doc = parsed_doc
+        try:
+            # print doc['cif_string']
+            print CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
+        except:
+            print 'Error in parsing..'
+            for line in (json.loads(json.dumps(doc['cif_string']))).splitlines():
+                if ' + ' in line:
+                    print line
+                    matching_list = re.findall(r'\'(.+?)\'', line)
+                    elemocc = matching_list[0].split('+')
+                    print elemocc
+                    for ele in elemocc:
+                        print re.sub('\([0-9]\)', '', ele.strip())
+
+    '''
     for doc in db['pauling_file_unique_Parse'].find({'key': 'sd_0540486'}):
         try:
             print doc['cif_string']
@@ -33,7 +51,7 @@ if __name__ == '__main__':
                     # db['unparsable_sds'].insert({'key': doc['key']})
             except Exception as e:
                 print e
-    '''
+    #######
     for doc in db['pauling_file_StructParse'].find().batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
