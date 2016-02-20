@@ -8,12 +8,32 @@ client = pymongo.MongoClient()
 db = client.springer
 
 if __name__ == '__main__':
-    # db['pauling_file_StructParse'].drop()
-    db['unparsable_sds'].drop()
-    # for doc in db['pauling_file_unique'].find().limit(1000):
-    #     db['pauling_file_StructParse'].insert(doc)
-
     d = 0
+    for doc in db['pauling_file_unique_Parse'].find({'key': 'sd_0540486'}):
+        try:
+            print doc['cif_string']
+            print CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
+        except:
+            print 'Error in parsing..'
+            try:
+                lines = (json.loads(json.dumps(doc['cif_string']))).splitlines()
+                noElemData = True
+                for i, line in enumerate(lines):
+                    if '_sm_atomic_environment_type' in line:
+                        print i, line
+                        print lines[i+1]
+                        if '? ?' not in lines[i+1]:
+                            noElemData = False
+                            break
+                if noElemData:
+                    print 'THIS IS IT!'
+                    # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'errors': ['cif missing element data']}})
+                else:
+                    print 'Some other error in cif'
+                    # db['unparsable_sds'].insert({'key': doc['key']})
+            except Exception as e:
+                print e
+    '''
     for doc in db['pauling_file_StructParse'].find().batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
@@ -71,3 +91,4 @@ if __name__ == '__main__':
             print doc['structure']
             print '#####################################'
     print 'Total number of unparsable SD_IDs are: ' + str(db['unparsable_sds'].find().count())
+    '''
