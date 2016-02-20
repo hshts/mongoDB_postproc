@@ -9,19 +9,40 @@ client = pymongo.MongoClient()
 db = client.springer
 
 if __name__ == '__main__':
-    # db['pauling_file_unique_Parse'].drop()
-    # db['unparsable_sds'].drop()
-    # for doc in db['pauling_file_unique'].find().limit(1000):
-    #     db['pauling_file_unique_Parse'].insert(doc)
-    # db['pauling_file_unique'].aggregate([{'$out': 'pauling_file_unique_Parse'}])
-    # db['pauling_file_unique_Parse'].ensure_index("key", unique=True)
-    d = 51403
+    d = 126097
     for doc in db['pauling_file_unique_Parse'].find().skip(d).batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
         ###########
-        soup = BeautifulSoup(doc['webpage_str'], 'lxml')
+        if 'structure' not in doc:
+            try:
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                    '$set': {'structure': CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()}},
+                                                       upsert=False)
+            except:
+                print 'Error in parsing..'
+                try:
+                    lines = (json.loads(json.dumps(doc['cif_string']))).splitlines()
+                    noElemData = True
+                    for i, line in enumerate(lines):
+                        if '_sm_atomic_environment_type' in line:
+                            print i, line
+                            print lines[i+1]
+                            if '? ?' not in lines[i+1]:
+                                noElemData = False
+                                break
+                    if noElemData:
+                        print 'THIS IS IT!'
+                        db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'errors': ['cif missing element data']}})
+                    else:
+                        print 'Some other error in cif'
+                        db['unparsable_sds'].insert({'key': doc['key']})
+                except Exception as e:
+                    print e
+                    print 'THIS ERROR SHOULD NOT OCCUR!'
+        print '###########'
         '''
+        soup = BeautifulSoup(doc['webpage_str'], 'lxml')
         geninfo = soup.find('div', {'id': 'general_information'})
         geninfo_text = geninfo.get_text()
         lines = (line.strip() for line in geninfo_text.splitlines())
@@ -37,7 +58,6 @@ if __name__ == '__main__':
         reference_dict = {'html': refsoup.prettify(),
                           'text': ''.join([(str(item.encode('utf-8'))).strip() for item in refsoup.contents])}
         geninfo_dict['ref'] = reference_dict
-        '''
         ############
         if 'cif_string_new' in doc:
             db['pauling_file_unique_Parse'].update({'key': doc['key']},
@@ -54,14 +74,9 @@ if __name__ == '__main__':
                          for tr in trs}
             exptables_dict.update(expfields)
         ############
-        db['pauling_file_unique_Parse'].update({'key': doc['key']},
-                                               {'$set': {'metadata._Springer.expdetails': exptables_dict}},
-                                               upsert=False)
-        '''
         db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
             '$set': {'metadata._Springer.geninfo': geninfo_dict, 'metadata._Springer.expdetails': exptables_dict}},
                                                upsert=False)
-        '''
         print 'Checking structure for ' + doc['key']
         if 'structure' not in doc:
             print '"structure" key not in this doc'
@@ -99,7 +114,7 @@ if __name__ == '__main__':
                             cif_string_new += line + '\n'
                 except:
                     print 'UNABLE TO PARSE THIS STRUCTURE. ADDING TO LIST OF UNPARSABLE_SDS'
-                    db['unparsable_sds'].insert({'key': doc['key']})
+                    # db['unparsable_sds'].insert({'key': doc['key']})
                     continue
                 try:
                     db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
@@ -110,11 +125,12 @@ if __name__ == '__main__':
                 except:
                     print 'STILL COULD NOT PARSE STRUCTURE. ADDING TO LIST OF UNPARSABLE_SDS'
                     print(traceback.format_exc())
-                    db['unparsable_sds'].insert({'key': doc['key']})
+                    # db['unparsable_sds'].insert({'key': doc['key']})
                     continue
                 print '-----------------------------'
         else:
             print 'Structure already parsed for ' + doc['key']
         print '#####################################'
         ##############
-    print 'FINISHED! Total number of unparsable SD_IDs are: ' + str(db['unparsable_sds'].find().count())
+        '''
+    # print 'FINISHED! Total number of unparsable SD_IDs are: ' + str(db['unparsable_sds'].find().count())
