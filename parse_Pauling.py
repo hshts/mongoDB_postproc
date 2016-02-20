@@ -9,7 +9,70 @@ client = pymongo.MongoClient()
 db = client.springer
 
 if __name__ == '__main__':
-    d = 126097
+    d = 0
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d):
+        d += 1
+        x = 0
+        print '#######'
+        print 'On record # {}'.format(d)
+        for parsed_doc in db['pauling_file_unique_Parse'].find({'key': unparsable_doc['key']}):
+            doc = parsed_doc
+        try:
+            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                    '$set': {'structure': CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()}},
+                                                       upsert=False)
+        except:
+            print 'Error in parsing doc with key: {}'.format(doc['key'])
+            cif_string_new = ''
+            try:
+                for line in (json.loads(json.dumps(doc['cif_string']))).splitlines():
+                    if ' + ' in line:
+                        # print line
+                        newline = '#' + line
+                        cif_string_new += newline + '\n'
+                        matching_list = re.findall(r'\'(.+?)\'', line)
+                        elemocc_brackets = matching_list[0].split('+')
+                        # print elemocc_brackets
+                        elemocc_list = []
+                        for i in elemocc_brackets:
+                             elemocc_list.append(re.sub('\([0-9]\)', '', i.strip()))
+                        elems = []
+                        occupancies = []
+                        for i in range(len(elemocc_list)):
+                            occupancies.append('0' + re.findall('\.?\d+', elemocc_list[i].strip())[1])
+                            c = re.findall('\D+', elemocc_list[i].strip())
+                            elems.append(c[1])
+                        # print elems
+                        # print occupancies
+                        for i in range(len(elems)):
+                            oldline = line
+                            old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
+                            new_elemline_list = old_elemline.split()
+                            new_elemline_list[7] = occupancies[i]
+                            new_elemline_list.append('\n')
+                            new_elemline = ' '.join(new_elemline_list)
+                            cif_string_new += new_elemline
+                    else:
+                        cif_string_new += line + '\n'
+                # print cif_string_new
+            except:
+                print 'STILL UNPARSABLE!'
+                continue
+            try:
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                        '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
+                                                           upsert=False)
+                db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                                   {'$rename': {'cif_string': 'metadata._Springer.cif_string_old'}})
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': cif_string_new}})
+                db['unparsable_sds'].remove({'key': doc['key']})
+                print 'SUCCESS!!'
+            except:
+                x += 1
+                print 'THIS IS NOT WORKING!!!'
+                print '######'
+    print 'FINISHED! Total number of documents not parsed in this round = {}'.format(x)
+    '''
     for doc in db['pauling_file_unique_Parse'].find().skip(d).batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
@@ -41,7 +104,7 @@ if __name__ == '__main__':
                     print e
                     print 'THIS ERROR SHOULD NOT OCCUR!'
         print '###########'
-        '''
+        #########
         soup = BeautifulSoup(doc['webpage_str'], 'lxml')
         geninfo = soup.find('div', {'id': 'general_information'})
         geninfo_text = geninfo.get_text()
