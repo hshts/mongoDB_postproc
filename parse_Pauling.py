@@ -15,8 +15,8 @@ if __name__ == '__main__':
     #     db['pauling_file_unique_Parse'].insert(doc)
     # db['pauling_file_unique'].aggregate([{'$out': 'pauling_file_unique_Parse'}])
     # db['pauling_file_unique_Parse'].ensure_index("key", unique=True)
-    d = 0
-    for doc in db['pauling_file_unique_Parse'].find().batch_size(75):
+    d = 51403
+    for doc in db['pauling_file_unique_Parse'].find().skip(d).batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
         ###########
@@ -66,7 +66,9 @@ if __name__ == '__main__':
         if 'structure' not in doc:
             print '"structure" key not in this doc'
             try:
-                doc['structure'] = CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                    '$set': {'structure': CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()}},
+                                                       upsert=False)
             except:
                 print('! Could not parse structure for: {}'.format(doc['key']))
                 print(traceback.format_exc())
