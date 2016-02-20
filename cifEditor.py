@@ -16,15 +16,42 @@ if __name__ == '__main__':
             # print doc['cif_string']
             print CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
         except:
-            print 'Error in parsing..'
+            print 'Error in parsing doc with key: {}'.format(doc['key'])
+            cif_string_new = ''
             for line in (json.loads(json.dumps(doc['cif_string']))).splitlines():
                 if ' + ' in line:
-                    print line
+                    # print line
+                    newline = '#' + line
+                    cif_string_new += newline + '\n'
                     matching_list = re.findall(r'\'(.+?)\'', line)
-                    elemocc = matching_list[0].split('+')
-                    print elemocc
-                    for ele in elemocc:
-                        print re.sub('\([0-9]\)', '', ele.strip())
+                    elemocc_brackets = matching_list[0].split('+')
+                    # print elemocc_brackets
+                    elemocc_list = []
+                    for i in elemocc_brackets:
+                         elemocc_list.append(re.sub('\([0-9]\)', '', i.strip()))
+                    elems = []
+                    occupancies = []
+                    for i in range(len(elemocc_list)):
+                        occupancies.append('0' + re.findall('\.?\d+', elemocc_list[i].strip())[1])
+                        c = re.findall('\D+', elemocc_list[i].strip())
+                        elems.append(c[1])
+                    # print elems
+                    # print occupancies
+                    for i in range(len(elems)):
+                        oldline = line
+                        old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
+                        new_elemline_list = old_elemline.split()
+                        new_elemline_list[7] = occupancies[i]
+                        new_elemline_list.append('\n')
+                        new_elemline = ' '.join(new_elemline_list)
+                        cif_string_new += new_elemline
+                else:
+                    cif_string_new += line + '\n'
+            # print cif_string_new
+            try:
+                print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+            except:
+                print 'THIS IS NOT WORKING!!!'
 
     '''
     for doc in db['pauling_file_unique_Parse'].find({'key': 'sd_0540486'}):
