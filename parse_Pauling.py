@@ -9,10 +9,11 @@ client = pymongo.MongoClient()
 db = client.springer
 
 if __name__ == '__main__':
-    d = 0
+    d = 1112
+    x = 0
+    unparsable_sds_removal = []
     for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d):
         d += 1
-        x = 0
         print '#######'
         print 'On record # {}'.format(d)
         for parsed_doc in db['pauling_file_unique_Parse'].find({'key': unparsable_doc['key']}):
@@ -57,6 +58,7 @@ if __name__ == '__main__':
                 # print cif_string_new
             except:
                 print 'STILL UNPARSABLE!'
+                x += 1
                 continue
             try:
                 db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
@@ -65,13 +67,15 @@ if __name__ == '__main__':
                 db['pauling_file_unique_Parse'].update({'key': doc['key']},
                                                    {'$rename': {'cif_string': 'metadata._Springer.cif_string_old'}})
                 db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': cif_string_new}})
-                db['unparsable_sds'].remove({'key': doc['key']})
+                unparsable_sds_removal.append(doc['key'])
                 print 'SUCCESS!!'
             except:
-                x += 1
                 print 'THIS IS NOT WORKING!!!'
                 print '######'
     print 'FINISHED! Total number of documents not parsed in this round = {}'.format(x)
+    print unparsable_sds_removal
+    for key in unparsable_sds_removal:
+        db['unparsable_sds'].remove({'key': key})
     '''
     for doc in db['pauling_file_unique_Parse'].find().skip(d).batch_size(75):
         d += 1
