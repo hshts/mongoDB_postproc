@@ -9,6 +9,7 @@ coll = db['pauling_file_unique_Parse']
 
 if __name__ == '__main__':
     space_groups = []
+    hp_space_groups = []
     df = pd.DataFrame()
     for doc in coll.find().batch_size(75).limit(100):
         try:
@@ -16,8 +17,15 @@ if __name__ == '__main__':
         except ValueError:
             print 'Value error for doc with key {}'.format(doc['key'])
             space_groups.append(None)
-    print space_groups
+    # print space_groups
     df['Space group'] = pd.Series(space_groups)
+    for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
+        try:
+            hp_space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
+        except ValueError:
+            print 'Value error for doc with key {}'.format(doc['key'])
+            hp_space_groups.append(None)
+    df['HP Space group'] = pd.Series(hp_space_groups)
     print df
     '''
     print 'Number of docs with "rt" = {}'.format(coll.find({'$text': {'$search': 'rt'}}).count())
