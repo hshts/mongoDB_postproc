@@ -9,10 +9,10 @@ client = pymongo.MongoClient()
 db = client.springer
 
 if __name__ == '__main__':
-    d = 1112
+    d = 0
     x = 0
     unparsable_sds_removal = []
-    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d):
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).limit(20):
         d += 1
         print '#######'
         print 'On record # {}'.format(d)
@@ -23,6 +23,7 @@ if __name__ == '__main__':
                     '$set': {'structure': CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()}},
                                                        upsert=False)
         except:
+            print(traceback.format_exc())
             print 'Error in parsing doc with key: {}'.format(doc['key'])
             cif_string_new = ''
             try:
