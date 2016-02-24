@@ -1,8 +1,4 @@
 import pymongo
-from pymatgen.io.cif import CifParser
-import re
-import traceback
-import json
 
 client = pymongo.MongoClient()
 db = client.springer
