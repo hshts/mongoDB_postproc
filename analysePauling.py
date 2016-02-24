@@ -3,11 +3,13 @@ from pymatgen import Composition
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from chronograph.chronograph import Chronograph
 
 
 client = pymongo.MongoClient()
 db = client.springer
 coll = db['pauling_file_unique_Parse']
+# cg = Chronograph(verbosity=2, start_timing=True)
 
 if __name__ == '__main__':
     keys = []
@@ -15,8 +17,9 @@ if __name__ == '__main__':
     hp = []
     ht = []
     df = pd.DataFrame()
+    # cg.start('first section')
     # for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
-    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp', '$options': 'i'}}).batch_size(75).limit(100):
+    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp', '$options': 'i'}}).batch_size(75):
         if doc['key'] not in keys:
             try:
                 keys.append(doc['key'])
@@ -27,7 +30,7 @@ if __name__ == '__main__':
                 print 'Value error for doc with key {}'.format(doc['key'])
                 print 'Cannot parse {}'.format(doc['metadata']['_Springer']['geninfo']['Space Group'])
                 space_groups.append(None)
-    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'ht', '$options': 'i'}}).batch_size(75).limit(100):
+    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'ht', '$options': 'i'}}).batch_size(75):
         if doc['key'] not in keys:
             try:
                 keys.append(doc['key'])
@@ -38,7 +41,7 @@ if __name__ == '__main__':
                 print 'Value error for doc with key {}'.format(doc['key'])
                 print 'Cannot parse {}'.format(doc['metadata']['_Springer']['geninfo']['Space Group'])
                 space_groups.append(None)
-    for doc in coll.find().batch_size(75).limit(100):
+    for doc in coll.find().batch_size(75):
         if doc['key'] not in keys:
             try:
                 keys.append(doc['key'])
