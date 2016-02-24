@@ -89,23 +89,3 @@ if __name__ == '__main__':
     # sns.violinplot(x='property', y='space group', hue='ht', data=df, palette='muted', split=True, inner='stick')
     sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
     plt.show()
-    '''
-    print 'Number of docs with "rt" = {}'.format(coll.find({'$text': {'$search': 'rt'}}).count())
-    print 'Number of docs with "ht" = {}'.format(coll.find({'$text': {'$search': 'ht'}}).count())
-    print coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp', '$options': 'i'}}).count()
-    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp', '$options': 'i'}}).limit(20):
-        print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-    for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).skip(1010).limit(1):
-        print doc['key'], doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-        try:
-            # c = Composition(doc['metadata']['_Springer']['geninfo']['Phase Label(s)'])
-            std_formula = ' ' + doc['metadata']['_Springer']['geninfo']['Standard Formula'] + ' '
-            # print c
-            # for match in coll.find({'$text': {'$match': std_formula}}):
-            for match in coll.find({'metadata._Springer.geninfo.Standard Formula': std_formula}):
-                print match['key'], match['metadata']['_Springer']['geninfo']['Phase Label(s)'], match['metadata'][
-                '_Springer']['geninfo']['Space Group']
-                # print doc['key'], doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-        except:
-            print 'Error in parsing composition'
-    '''
