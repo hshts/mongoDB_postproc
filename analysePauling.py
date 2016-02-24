@@ -13,32 +13,50 @@ if __name__ == '__main__':
     keys = []
     space_groups = []
     hp = []
+    ht = []
     df = pd.DataFrame()
-    for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
-        try:
-            keys.append(doc['key'])
-            space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
-            hp.append('Yes')
-        except ValueError:
-            print 'Value error for doc with key {}'.format(doc['key'])
-            print 'Cannot parse {}'.format(doc['metadata']['_Springer']['geninfo']['Space Group'])
-            space_groups.append(None)
+    # for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
+    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp', '$options': 'i'}}).batch_size(75).limit(100):
+        if doc['key'] not in keys:
+            try:
+                keys.append(doc['key'])
+                hp.append('Yes')
+                ht.append('No')
+                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
+            except ValueError:
+                print 'Value error for doc with key {}'.format(doc['key'])
+                print 'Cannot parse {}'.format(doc['metadata']['_Springer']['geninfo']['Space Group'])
+                space_groups.append(None)
+    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'ht', '$options': 'i'}}).batch_size(75).limit(100):
+        if doc['key'] not in keys:
+            try:
+                keys.append(doc['key'])
+                hp.append('No')
+                ht.append('Yes')
+                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
+            except ValueError:
+                print 'Value error for doc with key {}'.format(doc['key'])
+                print 'Cannot parse {}'.format(doc['metadata']['_Springer']['geninfo']['Space Group'])
+                space_groups.append(None)
     for doc in coll.find().batch_size(75).limit(100):
         if doc['key'] not in keys:
             try:
                 keys.append(doc['key'])
-                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
                 hp.append('No')
+                ht.append('No')
+                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
             except ValueError:
                 print 'Value error for doc with key {}'.format(doc['key'])
                 space_groups.append(None)
     df['key'] = pd.Series(keys)
     df['space group'] = pd.Series(space_groups)
     df['hp'] = pd.Series(hp)
-    df['property'] = pd.Series(['space group'] * len(keys))
+    df['ht'] = pd.Series(ht)
+    df['property'] = pd.Series(['1'] * len(keys))
     print df.head()
     sns.set_style('whitegrid')
-    sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
+    # sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
+    sns.violinplot(x='property', y='space group', hue='ht', data=df, palette='muted', split=True, inner='stick')
     plt.show()
     '''
     print 'Number of docs with "rt" = {}'.format(coll.find({'$text': {'$search': 'rt'}}).count())
