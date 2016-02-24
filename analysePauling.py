@@ -1,6 +1,8 @@
 import pymongo
 from pymatgen import Composition
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 client = pymongo.MongoClient()
@@ -8,25 +10,36 @@ db = client.springer
 coll = db['pauling_file_unique_Parse']
 
 if __name__ == '__main__':
+    keys = []
     space_groups = []
-    hp_space_groups = []
+    hp = []
     df = pd.DataFrame()
-    for doc in coll.find().batch_size(75).limit(100):
-        try:
-            space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
-        except ValueError:
-            print 'Value error for doc with key {}'.format(doc['key'])
-            space_groups.append(None)
-    # print space_groups
-    df['Space group'] = pd.Series(space_groups)
     for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
         try:
-            hp_space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
+            keys.append(doc['key'])
+            space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
+            hp.append('Yes')
         except ValueError:
             print 'Value error for doc with key {}'.format(doc['key'])
-            hp_space_groups.append(None)
-    df['HP Space group'] = pd.Series(hp_space_groups)
-    print df
+            print 'Cannot parse {}'.format(doc['metadata']['_Springer']['geninfo']['Space Group'])
+            space_groups.append(None)
+    for doc in coll.find().batch_size(75).limit(100):
+        if doc['key'] not in keys:
+            try:
+                keys.append(doc['key'])
+                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
+                hp.append('No')
+            except ValueError:
+                print 'Value error for doc with key {}'.format(doc['key'])
+                space_groups.append(None)
+    df['key'] = pd.Series(keys)
+    df['space group'] = pd.Series(space_groups)
+    df['hp'] = pd.Series(hp)
+    df['property'] = pd.Series(['space group'] * len(keys))
+    print df.head()
+    sns.set_style('whitegrid')
+    sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
+    plt.show()
     '''
     print 'Number of docs with "rt" = {}'.format(coll.find({'$text': {'$search': 'rt'}}).count())
     print 'Number of docs with "ht" = {}'.format(coll.find({'$text': {'$search': 'ht'}}).count())
