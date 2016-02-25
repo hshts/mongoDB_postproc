@@ -10,7 +10,6 @@ db = client.springer
 
 if __name__ == '__main__':
     d = 0
-    x = 0
     unparsable_sds_removal = []
     for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d):
         if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
@@ -31,7 +30,7 @@ if __name__ == '__main__':
             except:
                 print(traceback.format_exc())
                 print 'Error in parsing'
-                '''
+                ##########
                 cif_string_new = ''
                 cif_lines = json.loads(json.dumps(doc['cif_string'])).splitlines()
                 for lineno, line in enumerate(cif_lines):
@@ -86,64 +85,59 @@ if __name__ == '__main__':
                     except:
                         print '2nd NOOO!'
                         print(traceback.format_exc())
-    print unparsable_sds_removal
-    for key in unparsable_sds_removal:
-        db['unparsable_sds'].remove({'key': key})
+    # print unparsable_sds_removal
+    # for key in unparsable_sds_removal:
+    #     db['unparsable_sds'].remove({'key': key})
         ##########
-        '''
-                cif_string_new = ''
-                try:
-                    for line in (json.loads(json.dumps(doc['cif_string']))).splitlines():
-                        if ' + ' in line:
-                            newline = '#' + line
-                            cif_string_new += newline + '\n'
-                            matching_list = re.findall(r'\'(.+?)\'', line)
-                            elemocc_brackets = matching_list[0].split('+')
-                            elemocc_list = []
-                            for i in elemocc_brackets:
-                                 elemocc_list.append(re.sub('\([0-9]*\)', '', i.strip()))
-                            # print elemocc_list
-                            elems = []
-                            occupancies = []
-                            for i in range(len(elemocc_list)):
-                                occupancies.append('0' + re.findall('\.?\d+', elemocc_list[i].strip())[1])
-                                c = re.findall('\D+', elemocc_list[i].strip())
-                                elems.append(c[1])
-                            # print elems
-                            # print occupancies
-                            for i in range(len(elems)):
-                                oldline = line
-                                old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
-                                new_elemline_list = old_elemline.split()
-                                new_elemline_list[7] = occupancies[i]
-                                new_elemline_list.append('\n')
-                                new_elemline = ' '.join(new_elemline_list)
-                                cif_string_new += new_elemline
-                        else:
-                            cif_string_new += line + '\n'
-                except:
-                    print 'STILL UNPARSABLE!'
-                    x += 1
-                    continue
-                # print cif_string_new
-                try:
-                    db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
-                            '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
-                                                               upsert=False)
-                    db['pauling_file_unique_Parse'].update({'key': doc['key']},
-                                                       {'$rename': {'cif_string': 'metadata._Springer.cif_string_old'}})
-                    db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': cif_string_new}})
-                    unparsable_sds_removal.append(doc['key'])
-                    print 'SUCCESS!!'
-                except:
-                    print 'THIS IS NOT WORKING!!!'
-                    print '######'
-    print 'FINISHED! Total number of documents not parsed in this round = {}'.format(x)
+                        cif_string_new_new = cif_string_new
+                        cif_string_new = ''
+                        for line in cif_string_new_new.splitlines():
+                            if ' + ' in line:
+                                newline = '#' + line
+                                cif_string_new += newline + '\n'
+                                matching_list = re.findall(r'\'(.+?)\'', line)
+                                elemocc_brackets = matching_list[0].split('+')
+                                elemocc_list = []
+                                for i in elemocc_brackets:
+                                     elemocc_list.append(re.sub('\([0-9]*\)', '', i.strip()))
+                                # print elemocc_list
+                                elems = []
+                                occupancies = []
+                                for i in range(len(elemocc_list)):
+                                    occupancies.append('0' + re.findall('\.?\d+', elemocc_list[i].strip())[1])
+                                    c = re.findall('\D+', elemocc_list[i].strip())
+                                    elems.append(c[1])
+                                # print elems
+                                # print occupancies
+                                for i in range(len(elems)):
+                                    oldline = line
+                                    old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
+                                    new_elemline_list = old_elemline.split()
+                                    new_elemline_list[7] = occupancies[i]
+                                    new_elemline_list.append('\n')
+                                    new_elemline = ' '.join(new_elemline_list)
+                                    cif_string_new += new_elemline
+                            else:
+                                cif_string_new += line + '\n'
+                        # print cif_string_new
+                        try:
+                            structure = CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+                            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                                    '$set': {'structure': structure}},
+                                                                       upsert=False)
+                            db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                                               {'$rename': {'cif_string': 'metadata._Springer.cif_string_old'}})
+                            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': cif_string_new}})
+                            unparsable_sds_removal.append(doc['key'])
+                            print 'SUCCESS!!'
+                        except:
+                            print 'THIS IS NOT WORKING!!!'
+                            print '######'
     print unparsable_sds_removal
     for key in unparsable_sds_removal:
         db['unparsable_sds'].remove({'key': key})
     ###########
-    '''
+'''
     for doc in db['pauling_file_unique_Parse'].find().skip(d).batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
