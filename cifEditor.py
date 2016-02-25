@@ -9,16 +9,53 @@ db = client.springer
 
 if __name__ == '__main__':
     d = 0
-    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).limit(5):
+    for unparsable_doc in db['unparsable_sds'].find({'key': 'sd_1704003'}).sort('_id', pymongo.ASCENDING).limit(10):
         for parsed_doc in db['pauling_file_unique_Parse'].find({'key': unparsable_doc['key']}):
             doc = parsed_doc
         try:
-            print doc['cif_string']
             print CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
-        except:
+        except AssertionError:
             print 'Error in parsing doc with key: {}'.format(doc['key'])
-            '''
+            # print(traceback.format_exc())
             cif_string_new = ''
+            cif_lines = json.loads(json.dumps(doc['cif_string'])).splitlines()
+            for lineno, line in enumerate(cif_lines):
+                if '_sm_powderpattern_remark' in line:
+                    break
+                else:
+                    cif_string_new += line + '\n'
+            for line in cif_lines[lineno+1:]:
+                line_list = line.split()
+                if len(line_list) > 10:
+                    cif_string_new += line + '\n'
+                elif 1 < len(line_list) < 11:
+                    cif_string_new += '#' + line + '\n'
+            try:
+                print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+            except AssertionError:
+                print '1st NOOO!'
+                # print(traceback.format_exc())
+                cif_string_new = ''
+                for i, line in enumerate(cif_lines):
+                    if 'loop_' in line:
+                        if '_sm_powderpattern' in cif_lines[i+1]:
+                            cif_string_new += '#' + line + '\n'
+                            break
+                        else:
+                            cif_string_new += line + '\n'
+                    else:
+                        cif_string_new += line + '\n'
+                for line in cif_lines[i+1:]:
+                    # print line
+                    cif_string_new += '#' + line + '\n'
+                try:
+                    # print cif_string_new
+                    print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+                except:
+                    print '2nd NOOO!'
+                    print(traceback.format_exc())
+
+            '''
             for line in (json.loads(json.dumps(doc['cif_string']))).splitlines():
                 if ' + ' in line:
                     # print line

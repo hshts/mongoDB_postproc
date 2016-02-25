@@ -16,7 +16,7 @@ if __name__ == '__main__':
     df = pd.DataFrame()
     # for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
     for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp', '$options': 'i'}}).batch_size(
-            75).limit(50):
+            75):
         if doc['key'] not in keys:
             keys.append(doc['key'])
             hp.append('Yes')
@@ -36,7 +36,7 @@ if __name__ == '__main__':
                                                                                           'geninfo']['Space Group'])
                 density.append(None)
     for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'ht', '$options': 'i'}}).batch_size(
-            75).limit(50):
+            75):
         if doc['key'] not in keys:
             keys.append(doc['key'])
             hp.append('No')
@@ -55,7 +55,7 @@ if __name__ == '__main__':
                                                                                       doc['metadata']['_Springer'][
                                                                                           'geninfo']['Space Group'])
                 density.append(None)
-    for doc in coll.find().batch_size(75).limit(50):
+    for doc in coll.find().batch_size(75):
         if doc['key'] not in keys:
             keys.append(doc['key'])
             hp.append('No')
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
     print tips.head()
     sns.set_style('whitegrid')
-    # sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
+    sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
     # sns.violinplot(x='property', y='space group', hue='ht', data=df, palette='muted', split=True, inner='stick')
-    sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
+    # sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
     plt.show()
