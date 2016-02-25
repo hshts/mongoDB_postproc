@@ -10,21 +10,82 @@ db = client.springer
 
 if __name__ == '__main__':
     d = 0
-    x = 0
+    # x = 0
     unparsable_sds_removal = []
-    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).limit(20):
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d):
+        if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987']:
+            continue
         d += 1
         print '#######'
-        print 'On record # {}'.format(d)
+        print 'On record # {} and key: {}'.format(d, unparsable_doc['key'])
         for parsed_doc in db['pauling_file_unique_Parse'].find({'key': unparsable_doc['key']}):
             doc = parsed_doc
         try:
+            structure = CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
             db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
-                    '$set': {'structure': CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()}},
-                                                       upsert=False)
+                '$set': {'structure': CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()}},
+                                                   upsert=False)
         except:
             print(traceback.format_exc())
-            print 'Error in parsing doc with key: {}'.format(doc['key'])
+            print 'Error in parsing'
+            cif_string_new = ''
+            cif_lines = json.loads(json.dumps(doc['cif_string'])).splitlines()
+            for lineno, line in enumerate(cif_lines):
+                if '_sm_powderpattern_remark' in line:
+                    # sm_lineno = lineno + 1
+                    break
+                else:
+                    cif_string_new += line + '\n'
+            for line in cif_lines[lineno:]:
+                line_list = line.split()
+                if len(line_list) > 10:
+                    cif_string_new += line + '\n'
+                elif 1 < len(line_list) < 11:
+                    cif_string_new += '#' + line + '\n'
+            try:
+                structure = CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                    '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
+                                                       upsert=False)
+                db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                                       {'$rename': {'cif_string': 'metadata._Springer.cif_string_old'}})
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': cif_string_new}})
+                print '1st SUCCESS!!'
+            except:
+                print '1st NOOO!'
+                print(traceback.format_exc())
+                cif_string_new = ''
+                for i, line in enumerate(cif_lines):
+                    if 'loop_' in line:
+                        if '_sm_powderpattern' in cif_lines[i + 1]:
+                            cif_string_new += '#' + line + '\n'
+                            break
+                        else:
+                            cif_string_new += line + '\n'
+                    else:
+                        cif_string_new += line + '\n'
+                for line in cif_lines[i + 1:]:
+                    cif_string_new += '#' + line + '\n'
+                # print cif_string_new
+                try:
+                    structure = CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+                    db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                        '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
+                                                           upsert=False)
+                    db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                                           {'$rename': {
+                                                               'cif_string': 'metadata._Springer.cif_string_old'}})
+                    db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                                           {'$set': {'cif_string': cif_string_new}})
+                    unparsable_sds_removal.append(doc['key'])
+                    print '2nd SUCCESS!!'
+                except:
+                    print '2nd NOOO!'
+                    print(traceback.format_exc())
+    print unparsable_sds_removal
+    for key in unparsable_sds_removal:
+        db['unparsable_sds'].remove({'key': key})
+    '''
             cif_string_new = ''
             try:
                 for line in (json.loads(json.dumps(doc['cif_string']))).splitlines():
@@ -77,7 +138,7 @@ if __name__ == '__main__':
     print unparsable_sds_removal
     for key in unparsable_sds_removal:
         db['unparsable_sds'].remove({'key': key})
-    '''
+    ###########
     for doc in db['pauling_file_unique_Parse'].find().skip(d).batch_size(75):
         d += 1
         print 'On record # {}'.format(d)
@@ -101,7 +162,8 @@ if __name__ == '__main__':
                                 break
                     if noElemData:
                         print 'THIS IS IT!'
-                        db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'errors': ['cif missing element data']}})
+                        db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'errors': ['cif missing
+                        element data']}})
                     else:
                         print 'Some other error in cif'
                         db['unparsable_sds'].insert({'key': doc['key']})
