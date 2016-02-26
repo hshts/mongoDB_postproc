@@ -2,21 +2,38 @@ import pymongo
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from pymatgen.io.cif import CifParser
 
 client = pymongo.MongoClient()
 db = client.springer
 coll = db['pauling_file_unique_Parse']
 
 if __name__ == '__main__':
-    keys = []
-    space_groups = []
-    hp = []
-    ht = []
-    density = []
-    df = pd.DataFrame()
+    hp_compositions = set()
+    hp_keys = set()
+    gs_compositions = set()
+    x = 0
     # for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
-    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp', '$options': 'i'}}).batch_size(
-            75):
+    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp'}}).batch_size(75):
+        x += 1
+        if x % 100 == 0:
+            print x
+        if 'structure' in doc:
+            comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition
+            hp_compositions.add(comp)
+            hp_keys.add(doc['key'])
+    print 'HP DONE!'
+    print len(hp_compositions)
+    for doc in coll.find().batch_size(75):
+        if 'structure' in doc and doc['key'] not in hp_keys:
+            comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition
+            if comp in hp_compositions:
+                print 'MATCH!'
+                print doc['key'], comp
+                gs_compositions.add(comp)
+    print 'GS DONE!'
+    print len(gs_compositions)
+'''
         if doc['key'] not in keys:
             keys.append(doc['key'])
             hp.append('Yes')
@@ -89,3 +106,4 @@ if __name__ == '__main__':
     # sns.violinplot(x='property', y='space group', hue='ht', data=df, palette='muted', split=True, inner='stick')
     # sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
     plt.show()
+'''
