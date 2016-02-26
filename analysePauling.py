@@ -3,6 +3,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from pymatgen.io.cif import CifParser
+from pymatgen import Structure
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -19,17 +20,20 @@ if __name__ == '__main__':
         if x % 100 == 0:
             print x
         if 'structure' in doc:
-            comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition
+            comp = Structure.from_dict(doc['structure']).composition
             hp_compositions.add(comp)
             hp_keys.add(doc['key'])
     print 'HP DONE!'
-    print len(hp_compositions)
+    print len(hp_compositions), len(hp_keys)
+    y = 0
     for doc in coll.find().batch_size(75):
+        y += 1
+        if y % 1000 == 0:
+            print y
         if 'structure' in doc and doc['key'] not in hp_keys:
-            comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition
+            comp = Structure.from_dict(doc['structure']).composition
             if comp in hp_compositions:
-                print 'MATCH!'
-                print doc['key'], comp
+                print 'MATCH!', doc['key'], comp
                 gs_compositions.add(comp)
     print 'GS DONE!'
     print len(gs_compositions)
