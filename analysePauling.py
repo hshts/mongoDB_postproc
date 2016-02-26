@@ -12,7 +12,7 @@ coll = db['pauling_file_unique_Parse']
 if __name__ == '__main__':
     hp_compositions = set()
     hp_keys = set()
-    gs_compositions = set()
+    gs_compositions = []
     x = 0
     # for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
     for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp'}}).batch_size(75):
@@ -34,7 +34,7 @@ if __name__ == '__main__':
             comp = Structure.from_dict(doc['structure']).composition
             if comp in hp_compositions:
                 print 'MATCH!', doc['key'], comp
-                gs_compositions.add(comp)
+                gs_compositions.append(comp)
     print 'GS DONE!'
     print len(gs_compositions)
 '''
