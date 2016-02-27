@@ -98,7 +98,48 @@ def handle_partialocclables(cif_string):
         print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
         return cif_string_new
     except:
-        print 'UNSUCCESSFUL - Could not correct partial occupancy numbers (without brackets)'
+        print 'UNSUCCESSFUL - Could not correct partial occupancy numbers (w/o brackets)'
+
+
+def handle_partialoccbracketlables(cif_string):
+    """
+    Handles CIF parsing errors arising from atom labels containing partial occupancy numbers and brackets
+
+    :param cif_string: (str) cif file
+    :return: corrected cif string
+    """
+    cif_lines = json.loads(json.dumps(cif_string)).splitlines()
+    cif_string_new = ''
+    for line in cif_lines:
+        if ' + ' in line:
+            newline = '#' + line
+            cif_string_new += newline + '\n'
+            matching_list = re.findall(r'\'(.+?)\'', line)
+            elemocc_brackets = matching_list[0].split('+')
+            elemocc_list = []
+            for i in elemocc_brackets:
+                 elemocc_list.append(re.sub('\([0-9]\)', '', i.strip()))
+            elems = []
+            occupancies = []
+            for i in range(len(elemocc_list)):
+                occupancies.append('0' + re.findall('\.?\d+', elemocc_list[i].strip())[1])
+                c = re.findall('\D+', elemocc_list[i].strip())
+                elems.append(c[1])
+            for i in range(len(elems)):
+                oldline = line
+                old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
+                new_elemline_list = old_elemline.split()
+                new_elemline_list[7] = occupancies[i]
+                new_elemline_list.append('\n')
+                new_elemline = ' '.join(new_elemline_list)
+                cif_string_new += new_elemline
+        else:
+            cif_string_new += line + '\n'
+    try:
+        print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+        return cif_string_new
+    except:
+        print 'UNSUCCESSFUL - Could not correct partial occupancy numbers (with brackets)'
 
 
 if __name__ == '__main__':
@@ -113,40 +154,6 @@ if __name__ == '__main__':
             print(traceback.format_exc())
 
             '''
-            for line in (json.loads(json.dumps(doc['cif_string']))).splitlines():
-                if ' + ' in line:
-                    # print line
-                    newline = '#' + line
-                    cif_string_new += newline + '\n'
-                    matching_list = re.findall(r'\'(.+?)\'', line)
-                    elemocc_brackets = matching_list[0].split('+')
-                    # print elemocc_brackets
-                    elemocc_list = []
-                    for i in elemocc_brackets:
-                         elemocc_list.append(re.sub('\([0-9]\)', '', i.strip()))
-                    elems = []
-                    occupancies = []
-                    for i in range(len(elemocc_list)):
-                        occupancies.append('0' + re.findall('\.?\d+', elemocc_list[i].strip())[1])
-                        c = re.findall('\D+', elemocc_list[i].strip())
-                        elems.append(c[1])
-                    # print elems
-                    # print occupancies
-                    for i in range(len(elems)):
-                        oldline = line
-                        old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
-                        new_elemline_list = old_elemline.split()
-                        new_elemline_list[7] = occupancies[i]
-                        new_elemline_list.append('\n')
-                        new_elemline = ' '.join(new_elemline_list)
-                        cif_string_new += new_elemline
-                else:
-                    cif_string_new += line + '\n'
-            # print cif_string_new
-            try:
-                print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
-            except:
-                print 'THIS IS NOT WORKING!!!'
     ########
     for doc in db['pauling_file_unique_Parse'].find({'key': 'sd_0540486'}):
         try:
@@ -174,17 +181,5 @@ if __name__ == '__main__':
             except Exception as e:
                 print e
     #######
-    for doc in db['pauling_file_StructParse'].find().batch_size(75):
-        d += 1
-        print 'On record # {}'.format(d)
-        print 'Checking structure for ' + doc['key']
-        if 'structure' not in doc:
-            print '"structure" key not in this doc'
-            try:
-                doc['structure'] = CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
-            except:
-                print('! Could not parse structure for: {}'.format(doc['key']))
-                print(traceback.format_exc())
-                print 'Now trying to modify cif string'
-    print 'Total number of unparsable SD_IDs are: ' + str(db['unparsable_sds'].find().count())
     '''
+
