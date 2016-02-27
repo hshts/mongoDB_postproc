@@ -7,6 +7,62 @@ import json
 client = pymongo.MongoClient()
 db = client.springer
 
+
+def handle_insufficientpowderdata(cif_string):
+    """
+    Handles CIF errors arising from too few or too many values in data loop for diffraction data.
+
+    :param cif_string: (str) cif file
+    :return: corrected cif string
+    """
+    smlineno = 0
+    looplineno = 0
+    cif_lines = json.loads(json.dumps(cif_string)).splitlines()
+    powderdataline = False
+    loopdataline = False
+    cif_string_new = ''
+    for lineno, line in enumerate(cif_lines):
+        if '_sm_powderpattern_remark' in line:
+            powderdataline = True
+            smlineno = lineno + 1
+            break
+        else:
+            cif_string_new += line + '\n'
+    if powderdataline:
+        for line in cif_lines[smlineno:]:
+            line_list = line.split()
+            if len(line_list) > 10:
+                cif_string_new += line + '\n'
+            elif 1 < len(line_list) < 11:
+                cif_string_new += '#' + line + '\n'
+    try:
+        print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+        return cif_string_new
+    except AssertionError:
+        print 'UNSUCCESSFUL 1st attempt (uncommenting lines with insufficient or too many values for powder pattern)'
+        cif_string_new = ''
+        for lineno, line in enumerate(cif_lines):
+            if 'loop_' in line:
+                if '_sm_powderpattern' in cif_lines[lineno + 1]:
+                    cif_string_new += '#' + line + '\n'
+                    loopdataline = True
+                    looplineno = lineno + 1
+                    break
+                else:
+                    cif_string_new += line + '\n'
+            else:
+                cif_string_new += line + '\n'
+        if loopdataline:
+            for line in cif_lines[looplineno:]:
+                cif_string_new += '#' + line + '\n'
+        try:
+            print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+            return cif_string_new
+        except AssertionError:
+            print 'UNSUCCESSFUL 2nd attempt (uncommenting all lines with insufficient or too many values for powder ' \
+                  'pattern)'
+
+
 if __name__ == '__main__':
     d = 0
     for unparsable_doc in db['unparsable_sds'].find({'key': 'sd_1704003'}).sort('_id', pymongo.ASCENDING).limit(10):
@@ -16,44 +72,7 @@ if __name__ == '__main__':
             print CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
         except AssertionError:
             print 'Error in parsing doc with key: {}'.format(doc['key'])
-            # print(traceback.format_exc())
-            cif_string_new = ''
-            cif_lines = json.loads(json.dumps(doc['cif_string'])).splitlines()
-            for lineno, line in enumerate(cif_lines):
-                if '_sm_powderpattern_remark' in line:
-                    break
-                else:
-                    cif_string_new += line + '\n'
-            for line in cif_lines[lineno+1:]:
-                line_list = line.split()
-                if len(line_list) > 10:
-                    cif_string_new += line + '\n'
-                elif 1 < len(line_list) < 11:
-                    cif_string_new += '#' + line + '\n'
-            try:
-                print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
-            except AssertionError:
-                print '1st NOOO!'
-                # print(traceback.format_exc())
-                cif_string_new = ''
-                for i, line in enumerate(cif_lines):
-                    if 'loop_' in line:
-                        if '_sm_powderpattern' in cif_lines[i+1]:
-                            cif_string_new += '#' + line + '\n'
-                            break
-                        else:
-                            cif_string_new += line + '\n'
-                    else:
-                        cif_string_new += line + '\n'
-                for line in cif_lines[i+1:]:
-                    # print line
-                    cif_string_new += '#' + line + '\n'
-                try:
-                    # print cif_string_new
-                    print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
-                except:
-                    print '2nd NOOO!'
-                    print(traceback.format_exc())
+            print(traceback.format_exc())
 
             '''
             for line in (json.loads(json.dumps(doc['cif_string']))).splitlines():
@@ -109,7 +128,8 @@ if __name__ == '__main__':
                             break
                 if noElemData:
                     print 'THIS IS IT!'
-                    # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'errors': ['cif missing element data']}})
+                    # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'errors': ['cif missing
+                    element data']}})
                 else:
                     print 'Some other error in cif'
                     # db['unparsable_sds'].insert({'key': doc['key']})
