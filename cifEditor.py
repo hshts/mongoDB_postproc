@@ -19,11 +19,13 @@ def handle_missingdata(cif_string):
     noelemdata = True
     for i, line in enumerate(cif_lines):
         if '_sm_atomic_environment_type' in line:
-            if '? ?' not in cif_lines[i+1]:
+            if '? ?' not in cif_lines[i + 1]:
                 noelemdata = False
                 break
     if noelemdata:
         print 'Sucessful'
+        db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                               {'$addToSet': {'errors': ['cif missing element data']}})
     else:
         print 'Some other error in cif'
 
@@ -135,16 +137,22 @@ def handle_partialoccbracketlables(cif_string):
             newline = '#' + line
             cif_string_new += newline + '\n'
             matching_list = re.findall(r'\'(.+?)\'', line)
-            elemocc_brackets = matching_list[0].split('+')
+            if '<sup>' in matching_list[0]:
+                elemocc_brackets = matching_list[0].split(' + ')
+            else:
+                elemocc_brackets = matching_list[0].split('+')
             elemocc_list = []
             for i in elemocc_brackets:
-                elemocc_list.append(re.sub('\([0-9]\)', '', i.strip()))
+                elemocc_list.append(re.sub('\([0-9]*\)', '', i.strip()))
             elems = []
             occupancies = []
             for i in range(len(elemocc_list)):
                 occupancies.append('0' + re.findall('\.?\d+', elemocc_list[i].strip())[1])
                 c = re.findall('\D+', elemocc_list[i].strip())
                 elems.append(c[1])
+            for i, el in enumerate(elems):
+                if '<sup>' in el:
+                    elems[i] = el.strip('<sup>')
             for i in range(len(elems)):
                 oldline = line
                 old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
@@ -164,12 +172,45 @@ def handle_partialoccbracketlables(cif_string):
 
 if __name__ == '__main__':
     d = 0
-    for unparsable_doc in db['unparsable_sds'].find({'key': 'sd_1704003'}).sort('_id', pymongo.ASCENDING).limit(10):
+    unparsable_sds_removal = []
+    for unparsable_doc in db['unparsable_sds'].find({'key': 'sd_1521603'}).sort('_id', pymongo.ASCENDING).skip(d):
+        if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
+            continue
+        d += 1
+        print '#######'
+        print 'On record # {} and key: {}'.format(d, unparsable_doc['key'])
         for parsed_doc in db['pauling_file_unique_Parse'].find({'key': unparsable_doc['key']}):
             doc = parsed_doc
-        try:
-            print CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
-        except AssertionError:
-            print 'Error in parsing doc with key: {}'.format(doc['key'])
-            print(traceback.format_exc())
+        if 'structure' in doc:
+            unparsable_sds_removal.append(doc['key'])
+        else:
+            try:
+                structure = CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                    '$set': {'structure': CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()}},
+                                                       upsert=False)
+            except:
+                print(traceback.format_exc())
+                print 'Error in parsing'
+                ##########
+                '''
+                try:
+                    db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                        '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
+                                                           upsert=False)
+                    db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                                                               {'$rename': {'cif_string':
+                                                               'metadata._Springer.cif_string_old'}})
+                    db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string':
+                    cif_string_new}})
+                    unparsable_sds_removal.append(doc['key'])
+                    print 'DONE!'
+                except:
+                    print 'STILL COULD NOT PARSE STRUCTURE. ADDING TO LIST OF UNPARSABLE_SDS'
+                    print(traceback.format_exc())
+                print '-----------------------------'
+                    print unparsable_sds_removal
+    for key in unparsable_sds_removal:
+        db['unparsable_sds'].remove({'key': key})
 
+                '''
