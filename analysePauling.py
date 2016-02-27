@@ -10,10 +10,13 @@ db = client.springer
 coll = db['pauling_file_unique_Parse']
 
 if __name__ == '__main__':
-    hp_compositions = set()
+    hp_compositions = []
     hp_keys = set()
     gs_compositions = []
     x = 0
+    df = pd.DataFrame()
+    hp = []
+    space_groups = []
     # for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
     for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp'}}).batch_size(75):
         x += 1
@@ -21,8 +24,14 @@ if __name__ == '__main__':
             print x
         if 'structure' in doc:
             comp = Structure.from_dict(doc['structure']).composition
-            hp_compositions.add(comp)
+            hp_compositions.append(comp)
             hp_keys.add(doc['key'])
+            hp.append('Yes')
+            try:
+                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
+            except ValueError:
+                print 'HP Space group parsing error'
+                space_groups.append(None)
     print 'HP DONE!'
     print len(hp_compositions), len(hp_keys)
     y = 0
@@ -34,9 +43,31 @@ if __name__ == '__main__':
             comp = Structure.from_dict(doc['structure']).composition
             if comp in hp_compositions:
                 print 'MATCH!', doc['key'], comp
-                gs_compositions.append(comp)
+                # gs_compositions.append(comp)
+                hp.append('No')
+                try:
+                    space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
+                except ValueError:
+                    print 'HP Space group parsing error'
+                    space_groups.append(None)
     print 'GS DONE!'
-    print len(gs_compositions)
+    # print len(gs_compositions)
+    # df['key'] = pd.Series(keys)
+    df['space group'] = pd.Series(space_groups)
+    df['hp'] = pd.Series(hp)
+    # df['ht'] = pd.Series(ht)
+    # df['density'] = pd.Series(density)
+    df['property'] = pd.Series(['1'] * len(hp))
+    print df.head()
+    print df.shape
+    sns.set_style('whitegrid')
+    sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
+    # sns.violinplot(x='property', y='space group', hue='ht', data=df, palette='muted', split=True, inner='stick')
+    # sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
+    plt.show()
+    tips = sns.load_dataset("tips")
+    # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
+    print tips.head()
 '''
         if doc['key'] not in keys:
             keys.append(doc['key'])
