@@ -8,6 +8,26 @@ client = pymongo.MongoClient()
 db = client.springer
 
 
+def handle_missingdata(cif_string):
+    """
+    Handles CIF parsing errors arising from missing elemental data.
+
+    :param cif_string: (str) cif file
+    :return: corrected cif string
+    """
+    cif_lines = json.loads(json.dumps(cif_string)).splitlines()
+    noelemdata = True
+    for i, line in enumerate(cif_lines):
+        if '_sm_atomic_environment_type' in line:
+            if '? ?' not in cif_lines[i+1]:
+                noelemdata = False
+                break
+    if noelemdata:
+        print 'Sucessful'
+    else:
+        print 'Some other error in cif'
+
+
 def handle_insufficientpowderdata(cif_string):
     """
     Handles CIF parsing errors arising from too few or too many values in data loop for diffraction data.
@@ -118,7 +138,7 @@ def handle_partialoccbracketlables(cif_string):
             elemocc_brackets = matching_list[0].split('+')
             elemocc_list = []
             for i in elemocc_brackets:
-                 elemocc_list.append(re.sub('\([0-9]\)', '', i.strip()))
+                elemocc_list.append(re.sub('\([0-9]\)', '', i.strip()))
             elems = []
             occupancies = []
             for i in range(len(elemocc_list)):
@@ -152,34 +172,4 @@ if __name__ == '__main__':
         except AssertionError:
             print 'Error in parsing doc with key: {}'.format(doc['key'])
             print(traceback.format_exc())
-
-            '''
-    ########
-    for doc in db['pauling_file_unique_Parse'].find({'key': 'sd_0540486'}):
-        try:
-            print doc['cif_string']
-            print CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
-        except:
-            print 'Error in parsing..'
-            try:
-                lines = (json.loads(json.dumps(doc['cif_string']))).splitlines()
-                noElemData = True
-                for i, line in enumerate(lines):
-                    if '_sm_atomic_environment_type' in line:
-                        print i, line
-                        print lines[i+1]
-                        if '? ?' not in lines[i+1]:
-                            noElemData = False
-                            break
-                if noElemData:
-                    print 'THIS IS IT!'
-                    # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'errors': ['cif missing
-                    element data']}})
-                else:
-                    print 'Some other error in cif'
-                    # db['unparsable_sds'].insert({'key': doc['key']})
-            except Exception as e:
-                print e
-    #######
-    '''
 
