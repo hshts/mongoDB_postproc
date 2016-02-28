@@ -2,143 +2,79 @@ import pymongo
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from pymatgen.io.cif import CifParser
 from pymatgen import Structure
 
 client = pymongo.MongoClient()
 db = client.springer
 coll = db['pauling_file_unique_Parse']
+newcoll = db['analysePauling']
 
 if __name__ == '__main__':
-    hp_compositions = []
-    hp_keys = set()
+    hp_keys = []
     gs_compositions = []
+    hp_compositions = []
     x = 0
-    df = pd.DataFrame()
-    hp = []
-    space_groups = []
     # for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75).limit(100):
-    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp'}}).batch_size(75):
+    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'hp'}}).batch_size(75).limit(10):
         x += 1
-        if x % 100 == 0:
+        if x % 1000 == 0:
             print x
         if 'structure' in doc:
+            hp_keys.append(doc['key'])
             comp = Structure.from_dict(doc['structure']).composition
             hp_compositions.append(comp)
-            hp_keys.add(doc['key'])
-            hp.append('Yes')
             try:
-                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
-            except ValueError:
+                space_group = int(doc['metadata']['_Springer']['geninfo']['Space Group'])
+            except:
                 print 'HP Space group parsing error'
-                space_groups.append(None)
+                space_group = None
+            try:
+                density = float(doc['metadata']['_Springer']['geninfo']['Density'].split()[2])
+            except:
+                print 'HP Density parsing error'
+                density = None
+            newcoll.insert({'key': doc['key'], 'composition': str(comp), 'hp': 'Yes', 'ht': 'No', 'space_group': space_group,
+                            'density': density})
     print 'HP DONE!'
-    print len(hp_compositions), len(hp_keys)
-    y = 0
-    for doc in coll.find().batch_size(75):
-        y += 1
-        if y % 1000 == 0:
-            print y
+    print len(hp_keys)
+    z = 0
+    for doc in coll.find().batch_size(75).limit(10):
+        z += 1
+        if z % 1000 == 0:
+            print z
         if 'structure' in doc and doc['key'] not in hp_keys:
             comp = Structure.from_dict(doc['structure']).composition
             if comp in hp_compositions:
                 print 'MATCH!', doc['key'], comp
-                # gs_compositions.append(comp)
-                hp.append('No')
-                try:
-                    space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
-                except ValueError:
-                    print 'HP Space group parsing error'
-                    space_groups.append(None)
+                gs_compositions.append(comp)
+            try:
+                space_group = int(doc['metadata']['_Springer']['geninfo']['Space Group'])
+            except ValueError:
+                print 'HT Space group parsing error'
+                space_group = None
+            try:
+                density = float(doc['metadata']['_Springer']['geninfo']['Density'].split()[2])
+            except:
+                print 'HT Density parsing error'
+                density = None
+            newcoll.insert({'key': doc['key'], 'composition': str(comp), 'hp': 'No', 'ht': 'No', 'space_group': space_group,
+                            'density': density})
     print 'GS DONE!'
-    # print len(gs_compositions)
+    print len(gs_compositions)
+    print newcoll
     # df['key'] = pd.Series(keys)
-    df['space group'] = pd.Series(space_groups)
-    df['hp'] = pd.Series(hp)
+    # df['space group'] = pd.Series(space_groups)
+    # df['hp'] = pd.Series(hp)
     # df['ht'] = pd.Series(ht)
     # df['density'] = pd.Series(density)
-    df['property'] = pd.Series(['1'] * len(hp))
-    print df.head()
-    print df.shape
+    # df['property'] = pd.Series(['1'] * len(hp))
+    # print df.head()
+    # print df.shape
     sns.set_style('whitegrid')
-    sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
+    # sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
     # sns.violinplot(x='property', y='space group', hue='ht', data=df, palette='muted', split=True, inner='stick')
     # sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
-    plt.show()
-    tips = sns.load_dataset("tips")
+    # plt.show()
+    # tips = sns.load_dataset("tips")
     # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
-    print tips.head()
-'''
-        if doc['key'] not in keys:
-            keys.append(doc['key'])
-            hp.append('Yes')
-            ht.append('No')
-            try:
-                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
-            except ValueError:
-                print 'HP Space group parsing error for key {} and space group {}'.format(doc['key'],
-                                                                                          doc['metadata']['_Springer'][
-                                                                                              'geninfo']['Space Group'])
-                space_groups.append(None)
-            try:
-                density.append(float(doc['metadata']['_Springer']['geninfo']['Density'].split()[2]))
-            except:
-                print 'HP Density parsing error for key {} and space group {}'.format(doc['key'],
-                                                                                      doc['metadata']['_Springer'][
-                                                                                          'geninfo']['Space Group'])
-                density.append(None)
-    for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': 'ht', '$options': 'i'}}).batch_size(
-            75):
-        if doc['key'] not in keys:
-            keys.append(doc['key'])
-            hp.append('No')
-            ht.append('Yes')
-            try:
-                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
-            except ValueError:
-                print 'HT Space group parsing error for key {} and space group {}'.format(doc['key'],
-                                                                                          doc['metadata']['_Springer'][
-                                                                                              'geninfo']['Space Group'])
-                space_groups.append(None)
-            try:
-                density.append(float(doc['metadata']['_Springer']['geninfo']['Density'].split()[2]))
-            except:
-                print 'HT Density parsing error for key {} and space group {}'.format(doc['key'],
-                                                                                      doc['metadata']['_Springer'][
-                                                                                          'geninfo']['Space Group'])
-                density.append(None)
-    for doc in coll.find().batch_size(75):
-        if doc['key'] not in keys:
-            keys.append(doc['key'])
-            hp.append('No')
-            ht.append('No')
-            try:
-                space_groups.append(int(doc['metadata']['_Springer']['geninfo']['Space Group']))
-            except ValueError:
-                print 'Space group parsing error for key {} and space group {}'.format(doc['key'],
-                                                                                       doc['metadata']['_Springer'][
-                                                                                           'geninfo']['Space Group'])
-                space_groups.append(None)
-            try:
-                density.append(float(doc['metadata']['_Springer']['geninfo']['Density'].split()[2]))
-            except:
-                print 'Density parsing error for key {} and space group {}'.format(doc['key'],
-                                                                                   doc['metadata']['_Springer'][
-                                                                                       'geninfo']['Space Group'])
-                density.append(None)
-    df['key'] = pd.Series(keys)
-    df['space group'] = pd.Series(space_groups)
-    df['hp'] = pd.Series(hp)
-    df['ht'] = pd.Series(ht)
-    df['density'] = pd.Series(density)
-    df['property'] = pd.Series(['1'] * len(keys))
-    print df.head()
-    tips = sns.load_dataset("tips")
-    # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
-    print tips.head()
-    sns.set_style('whitegrid')
-    sns.violinplot(x='property', y='space group', hue='hp', data=df, palette='muted', split=True, inner='stick')
-    # sns.violinplot(x='property', y='space group', hue='ht', data=df, palette='muted', split=True, inner='stick')
-    # sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
-    plt.show()
-'''
+    # print tips.head()
