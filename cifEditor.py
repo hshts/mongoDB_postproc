@@ -60,7 +60,7 @@ def handle_insufficientpowderdata(cif_string):
     try:
         print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
         return cif_string_new
-    except AssertionError:
+    except:
         print 'UNSUCCESSFUL 1st attempt (uncommenting lines with insufficient or too many values for powder pattern)'
         cif_string_new = ''
         for lineno, line in enumerate(cif_lines):
@@ -80,9 +80,9 @@ def handle_insufficientpowderdata(cif_string):
         try:
             print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
             return cif_string_new
-        except AssertionError:
-            print 'UNSUCCESSFUL 2nd attempt (uncommenting all lines with insufficient or too many values for powder ' \
-                  'pattern)'
+        except:
+            print 'UNSUCCESSFUL 2nd attempt (uncommenting all powder diffraction lines)'
+            return cif_string_new
 
 
 def handle_partialocclables(cif_string):
@@ -96,26 +96,39 @@ def handle_partialocclables(cif_string):
     cif_string_new = ''
     for line in cif_lines:
         if ' + ' in line:
-            matching_list = re.findall(r'\'(.+?)\'', line)
-            elemocc = matching_list[0].split('+')
-            elems = []
-            occupancies = []
-            for i in range(len(elemocc)):
-                occupancies.append('0' + re.findall('\.?\d+', elemocc[i].strip())[1])
-                c = re.findall('\D+', elemocc[i].strip())
-                elems.append(c[1])
-            newline = '#' + line
-            cif_string_new += newline + '\n'
-            for i in range(len(elems)):
-                oldline = line
-                old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
-                new_elemline_list = old_elemline.split()
-                new_elemline_list[7] = occupancies[i]
-                new_elemline_list.append('\n')
-                new_elemline = ' '.join(new_elemline_list)
-                cif_string_new += new_elemline
+            try:
+                matching_list = re.findall(r'\'(.+?)\'', line)
+                elemocc = matching_list[0].split('+')
+                elems = []
+                occupancies = []
+                for i in range(len(elemocc)):
+                    occupancies.append('0' + re.findall('\.?\d+', elemocc[i].strip())[1])
+                    c = re.findall('\D+', elemocc[i].strip())
+                    elems.append(c[1])
+                occ_sum = 0
+                for i in range(len(occupancies)):
+                    occ_sum += float(occupancies[i])
+                if occ_sum != 1:
+                    sum_exc_last = 0
+                    for i in range(len(occupancies) - 1):
+                        sum_exc_last += float(occupancies[i])
+                    occupancies[:-1] = str(1 - sum_exc_last)
+                # occupancies[1] = 0.455
+                newline = '#' + line
+                cif_string_new += newline + '\n'
+                for i in range(len(elems)):
+                    oldline = line
+                    old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
+                    new_elemline_list = old_elemline.split()
+                    new_elemline_list[7] = occupancies[i]
+                    new_elemline_list.append('\n')
+                    new_elemline = ' '.join(new_elemline_list)
+                    cif_string_new += new_elemline
+            except:
+                break
         else:
             cif_string_new += line + '\n'
+    # print cif_string_new
     try:
         print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
         return cif_string_new
@@ -150,12 +163,9 @@ def handle_partialoccbracketlables(cif_string):
                 for i in range(len(elemocc_list)):
                     occupancies.append('0' + re.findall('\.?\d+', elemocc_list[i].strip())[1])
                     c = re.findall('\D+', elemocc_list[i].strip())
-                    elems.append(c[1])
+                    elems.append(str(c[1]).replace('<sup>', ''))
             except:
                 break
-            for i, el in enumerate(elems):
-                if '<sup>' in el:
-                    elems[i] = el.strip('<sup>')
             for i in range(len(elems)):
                 oldline = line
                 old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
@@ -166,6 +176,7 @@ def handle_partialoccbracketlables(cif_string):
                 cif_string_new += new_elemline
         else:
             cif_string_new += line + '\n'
+    # print cif_string_new
     try:
         print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
         return cif_string_new
@@ -192,10 +203,10 @@ if __name__ == '__main__':
                 structure = CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
                 print structure
             except:
-                print(traceback.format_exc())
                 print 'Error in parsing'
                 cif_string_new = None
-                cif_string_new = handle_partialoccbracketlables(doc['cif_string'])
+                # cif_string_new = handle_insufficientpowderdata(doc['cif_string'])
+                cif_string_new = handle_partialocclables(doc['cif_string'])
                 if cif_string_new is not None:
                     db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
                         '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
