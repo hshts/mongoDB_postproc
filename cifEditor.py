@@ -95,8 +95,10 @@ def handle_partialocclables(cif_string):
     cif_lines = json.loads(json.dumps(cif_string)).splitlines()
     cif_string_new = ''
     for line in cif_lines:
-        if ' + ' in line:
+        if ' + ' in line and len(line) < 100:
             try:
+                newline = '#' + line
+                cif_string_new += newline + '\n'
                 matching_list = re.findall(r'\'(.+?)\'', line)
                 elemocc = matching_list[0].split('+')
                 elems = []
@@ -113,9 +115,6 @@ def handle_partialocclables(cif_string):
                     for i in range(len(occupancies) - 1):
                         sum_exc_last += float(occupancies[i])
                     occupancies[:-1] = str(1 - sum_exc_last)
-                # occupancies[1] = 0.455
-                newline = '#' + line
-                cif_string_new += newline + '\n'
                 for i in range(len(elems)):
                     oldline = line
                     old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
