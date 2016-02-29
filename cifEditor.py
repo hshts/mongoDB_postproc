@@ -97,6 +97,7 @@ def handle_partialocclables(cif_string):
     for line in cif_lines:
         if ' + ' in line and len(line) < 100:
             try:
+                # print line
                 newline = '#' + line
                 cif_string_new += newline + '\n'
                 matching_list = re.findall(r'\'(.+?)\'', line)
@@ -133,6 +134,7 @@ def handle_partialocclables(cif_string):
         return cif_string_new
     except:
         print 'UNSUCCESSFUL - Could not correct partial occupancy numbers (w/o brackets)'
+        return cif_string_new
 
 
 def handle_partialoccbracketlables(cif_string):
@@ -183,10 +185,65 @@ def handle_partialoccbracketlables(cif_string):
         print 'UNSUCCESSFUL - Could not correct partial occupancy numbers (with brackets)'
 
 
+def handle_unparsablespecies(cif_string):
+    """
+    Handles CIF parsing errors arising from unrecognizable species
+
+    :param cif_string: (str) cif file
+    :return: corrected cif string
+    """
+    cif_lines = json.loads(json.dumps(cif_string)).splitlines()
+    cif_string_new = ''
+    for line in cif_lines:
+        if 'OH' in line.upper():
+            try:
+                print line
+                newline = '#' + line
+                cif_string_new += newline + '\n'
+                '''
+                matching_list = re.findall(r'\'(.+?)\'', line)
+                elemocc = matching_list[0].split('+')
+                elems = []
+                occupancies = []
+                for i in range(len(elemocc)):
+                    occupancies.append('0' + re.findall('\.?\d+', elemocc[i].strip())[1])
+                    c = re.findall('\D+', elemocc[i].strip())
+                    elems.append(c[1])
+                occ_sum = 0
+                for i in range(len(occupancies)):
+                    occ_sum += float(occupancies[i])
+                if occ_sum != 1:
+                    sum_exc_last = 0
+                    for i in range(len(occupancies) - 1):
+                        sum_exc_last += float(occupancies[i])
+                    occupancies[:-1] = str(1 - sum_exc_last)
+                for i in range(len(elems)):
+                    oldline = line
+                    old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
+                    new_elemline_list = old_elemline.split()
+                    new_elemline_list[7] = occupancies[i]
+                    new_elemline_list.append('\n')
+                    new_elemline = ' '.join(new_elemline_list)
+                    cif_string_new += new_elemline
+                    '''
+            except:
+                break
+        else:
+            cif_string_new += line + '\n'
+    # print cif_string_new
+    try:
+        print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+        return cif_string_new
+    except:
+        print 'UNSUCCESSFUL - Could not correct addition of species'
+        return cif_string_new
+
+
+
 if __name__ == '__main__':
     d = 0
     remove_keys = []
-    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d):
+    for unparsable_doc in db['unparsable_sds'].find({'key': 'sd_1615905'}).sort('_id', pymongo.ASCENDING).skip(d):
         if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
             continue
         d += 1
@@ -206,7 +263,9 @@ if __name__ == '__main__':
                 cif_string_new = None
                 # cif_string_new = handle_insufficientpowderdata(doc['cif_string'])
                 cif_string_new = handle_partialocclables(doc['cif_string'])
+                cif_string_new = handle_unparsablespecies(cif_string_new)
                 if cif_string_new is not None:
+                    '''
                     db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
                         '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
                                                            upsert=False)
@@ -215,11 +274,13 @@ if __name__ == '__main__':
                                                                'metadata._Springer.cif_string_old'}})
                     db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string':
                     cif_string_new}})
+                    '''
                     remove_keys.append(doc['key'])
                     print 'DONE!'
     print remove_keys
-    for key in remove_keys:
-        db['unparsable_sds'].remove({'key': key})
+    print len(remove_keys)
+    # for key in remove_keys:
+    #     db['unparsable_sds'].remove({'key': key})
 ##########
 '''
                 try:
