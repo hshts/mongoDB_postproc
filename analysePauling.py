@@ -2,7 +2,7 @@ import pymongo
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from pymatgen import Structure
+from pymatgen import Structure, Composition
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -22,7 +22,8 @@ def insert_states(state, collname):
             print x
         if 'structure' in doc:
             keys.append(doc['key'])
-            comp = Structure.from_dict(doc['structure']).composition
+            # comp = Structure.from_dict(doc['structure']).composition
+            comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula'])
             compositions.append(comp)
             try:
                 space_group = int(doc['metadata']['_Springer']['geninfo']['Space Group'])
@@ -51,7 +52,8 @@ def insert_states(state, collname):
         if y % 1000 == 0:
             print y
         if 'structure' in doc and doc['key'] not in keys:
-            comp = Structure.from_dict(doc['structure']).composition
+            # comp = Structure.from_dict(doc['structure']).composition
+            comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula'])
             if comp in compositions:
                 print 'MATCH!', doc['key'], comp
                 gs_compositions.append(comp)
