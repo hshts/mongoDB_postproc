@@ -3,6 +3,9 @@ from pymatgen.io.cif import CifParser
 import re
 import traceback
 import json
+from pymatgen import Structure, Element, DummySpecie
+
+# from pymatgen.analysis.structure_matcher import
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -231,12 +234,19 @@ def handle_unparsablespecies(cif_string):
         else:
             cif_string_new += line + '\n'
     # print cif_string_new
-    try:
-        print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
-        return cif_string_new
-    except:
-        print 'UNSUCCESSFUL - Could not correct addition of species'
-        return cif_string_new
+    # try:
+    print len(CifParser.from_string(cif_string_new).get_structures()[0].as_dict()['sites'])
+    # print DummySpecie(symbol='XOH2')
+    struc = Structure.from_dict(CifParser.from_string(cif_string_new).get_structures()[0].as_dict())
+    new_species = DummySpecie(symbol='XOH2')
+    print new_species.symbol
+    struc.append(DummySpecie(symbol='XOH2'), [0, 0, 0])
+    print struc
+    # print(traceback.format_exc())
+    return cif_string_new
+    # except:
+    #     print 'UNSUCCESSFUL - Could not correct addition of species'
+    #     return cif_string_new
 
 
 

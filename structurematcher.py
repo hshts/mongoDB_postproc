@@ -15,9 +15,10 @@ if __name__ == '__main__':
         struc3 = Structure.from_dict(doc['structure'])
     for doc in coll.find({'key': 'sd_1010018'}):
         struc4 = Structure.from_dict(doc['structure'])
+        print struc4
         print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-        print Structure.from_dict(doc['structure'])
-        print doc['structure']
+        # print Structure.from_dict(doc['structure'])
+        # print doc['structure']
     for doc in coll.find({'key': 'sd_0529813'}):
         struc5 = Structure.from_dict(doc['structure'])
     matcher = StructureMatcher()
