@@ -34,9 +34,5 @@ if __name__ == '__main__':
             except Exception as e:
                 print e
                 continue
-            # for site in doc['structure']['sites']:
-            #     for element in site['species']:
-            # if struct_comp != formula_comp:
-            #     print 'NO MATCH!'
     print 'FINISHED!'
     print 'Number of incorrect parsed structures = {}'.format(db['incorrect_structs'].count())
