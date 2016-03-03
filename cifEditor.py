@@ -5,7 +5,6 @@ import traceback
 import json
 from pymatgen import Structure, Element, DummySpecie
 
-# from pymatgen.analysis.structure_matcher import
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -233,22 +232,15 @@ def handle_unparsablespecies(cif_string):
                 break
         else:
             cif_string_new += line + '\n'
-    # print cif_string_new
-    # try:
-    print len(CifParser.from_string(cif_string_new).get_structures()[0].as_dict()['sites'])
-    # print DummySpecie(symbol='XOH2')
-    struc = Structure.from_dict(CifParser.from_string(cif_string_new).get_structures()[0].as_dict())
-    new_species = DummySpecie(symbol='XOH2')
-    print new_species.symbol
-    struc.append(DummySpecie(symbol='XOH2'), [0, 0, 0])
-    print struc
-    # print(traceback.format_exc())
-    return cif_string_new
-    # except:
-    #     print 'UNSUCCESSFUL - Could not correct addition of species'
-    #     return cif_string_new
-
-
+    try:
+        struc = CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
+        # new_species = DummySpecie(symbol='XOH2')
+        # struc.append(DummySpecie(symbol='XOH2'), [0, 0, 0])
+        print struc
+        return cif_string_new
+    except:
+        print 'UNSUCCESSFUL - Could not correct addition of species'
+        return cif_string_new
 
 if __name__ == '__main__':
     d = 0
@@ -263,18 +255,17 @@ if __name__ == '__main__':
             doc = parsed_doc
         if 'structure' in doc:
             remove_keys.append(doc['key'])
-            print doc['structure']
         else:
             try:
                 structure = CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
-                print structure
+                # print structure
             except:
                 print 'Error in parsing'
-                cif_string_new = None
+                new_cif_string = None
                 # cif_string_new = handle_insufficientpowderdata(doc['cif_string'])
-                cif_string_new = handle_partialocclables(doc['cif_string'])
-                cif_string_new = handle_unparsablespecies(cif_string_new)
-                if cif_string_new is not None:
+                new_cif_string = handle_partialocclables(doc['cif_string'])
+                new_cif_string = handle_unparsablespecies(new_cif_string)
+                if new_cif_string is not None:
                     '''
                     db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
                         '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
