@@ -2,7 +2,7 @@ import pymongo
 from pymatgen.io.cif import CifParser
 import re
 import json
-from pymatgen import Composition
+from pymatgen import Composition, Structure
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -59,41 +59,42 @@ def fix_incorrectlyparsedstructures(cif_string):
 if __name__ == '__main__':
     d = 0
     remove_keys = []
-    for incorrect_doc in db['incorrect_structs'].find().batch_size(75).sort('_id', pymongo.ASCENDING).skip(d):
+    for incorrect_doc in db['incorrect_structs'].find().batch_size(75).sort('_id', pymongo.ASCENDING).skip(d).limit(10):
         d += 1
         print '#######'
         print 'On record # {} and key {}'.format(d, incorrect_doc['key'])
         for parsed_doc in db['pauling_file_unique_Parse'].find({'key': incorrect_doc['key']}):
             doc = parsed_doc
-        new_cif_string = fix_incorrectlyparsedstructures(doc['cif_string'])
-        try:
-            struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
-        except Exception as e:
-            print e
-            print 'ERROR parsing NEW structure!'
-            continue
-        print 'Structure composition = {}'.format(struct_comp)
-        try:
-            formula_comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula']).get_el_amt_dict()
-        except Exception as e:
-            print e
-            continue
-        print 'Formula composition = {}'.format(formula_comp)
-        missing_element = False
-        for element in formula_comp:
-            if element not in struct_comp:
-                missing_element = True
-                break
-        if missing_element:
-            print 'NO MATCH! - Element {} not in structure'.format(element)
-            continue
-        print 'SUCCESS'
-        db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'structure': CifParser.from_string(
-        new_cif_string).get_structures()[0].as_dict()}}, upsert=False)
-        db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$rename': {'cif_string':
-        'metadata._Springer.cif_string_old'}})
-        db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': new_cif_string}})
-        remove_keys.append(doc['key'])
+        if 'cif_string_old' in doc['metadata']['_Springer']:
+            new_cif_string = fix_incorrectlyparsedstructures(doc['metadata']['_Springer']['cif_string_old'])
+            try:
+                struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
+            except Exception as e:
+                print e
+                print 'ERROR parsing NEW structure!'
+                continue
+            print 'Structure composition = {}'.format(struct_comp)
+            try:
+                formula_comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula']).get_el_amt_dict()
+            except Exception as e:
+                print e
+                continue
+            print 'Formula composition = {}'.format(formula_comp)
+            missing_element = False
+            for element in formula_comp:
+                if element not in struct_comp:
+                    missing_element = True
+                    break
+            if missing_element:
+                print 'NO MATCH! - Element {} not in structure'.format(element)
+                continue
+            print 'SUCCESS'
+            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'structure': CifParser.from_string(
+            new_cif_string).get_structures()[0].as_dict()}}, upsert=False)
+            # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$rename': {'cif_string':
+            # 'metadata._Springer.cif_string_old'}})
+            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': new_cif_string}})
+            remove_keys.append(doc['key'])
     print 'FINISHED!'
     print remove_keys
     print len(remove_keys)

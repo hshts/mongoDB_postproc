@@ -16,7 +16,13 @@ class Testgetcoordination(unittest.TestCase):
         self.assertEqual(getcoordination('test_structures/ZnS_mp-10695_conventional_standard.cif'), {'Zn': 4, 'S': 4})
 
     def test_CsCl(self):
-        self.assertEqual(getcoordination('test_structures/CsCl_mp-573697_conventional_standard.cif'), {'Cs': 6, 'Cl': 6})
+        self.assertEqual(getcoordination('test_structures/CsCl_mp-22865_conventional_standard.cif'), {'Cs': 8, 'Cl': 8})
+
+    def test_CoSb3(self):
+        self.assertEqual(getcoordination('test_structures/CoSb3_mp-1317_conventional_standard.cif'), {'Co': 6, 'Sb': 4})
+
+    def test_Co2NiGa(self):
+        self.assertEqual(getcoordination('test_structures/GaCo2Ni_mp-20551_conventional_standard.cif'), {'Co': 12, 'Ga': 12, 'Ni': 12})
 
 
 if __name__ == '__main__':
