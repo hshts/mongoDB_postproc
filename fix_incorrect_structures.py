@@ -138,6 +138,14 @@ def fix_incorrectlyparsedstructures_sup(cif_string):
                         elems.append(c[1].strip('<sup>'))
                     else:
                         elems.append(c[1])
+                occ_sum = 0
+                for i in range(len(occupancies)):
+                    occ_sum += float(occupancies[i])
+                if occ_sum != 1:
+                    sum_exc_last = 0
+                    for i in range(len(occupancies) - 1):
+                        sum_exc_last += float(occupancies[i])
+                    occupancies[-1] = str(1 - sum_exc_last)
                 for i in range(len(elems)):
                     oldline = line
                     old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
@@ -164,63 +172,65 @@ if __name__ == '__main__':
         print 'On record # {} and key {}'.format(d, incorrect_doc['key'])
         for parsed_doc in db['pauling_file_unique_Parse'].find({'key': incorrect_doc['key']}):
             doc = parsed_doc
-        try:
-            formula_comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula']).get_el_amt_dict()
-        except Exception as e:
-            print e
-            continue
-        print 'Formula composition = {}'.format(formula_comp)
-        cif = CifFile.from_string(doc['cif_string']).data
-        for block in cif:
-            if 'standardized' in block:
-                cif_stdblock = cif[block]
-                break
-        missing_element_in_cif = False
-        for element in formula_comp:
-            if element not in cif_stdblock['_atom_site_type_symbol']:
-                missing_element_in_cif = True
-                break
-        if missing_element_in_cif:
-            print 'ELEMENT NOT IN CIF!'
+        if 'cif_string_old' in doc['metadata']['_Springer']:
+            # print doc['cif_string']
+            # new_cif_string = fix_incorrectlyparsedstructures_labels(doc['cif_string'])
+            # new_cif_string = fix_incorrectlyparsedstructures_braclabels(doc['cif_string'])
+            # new_cif_string = fix_incorrectlyparsedstructures_sup(doc['cif_string'])
+            new_cif_string = fix_incorrectlyparsedstructures_sup(doc['metadata']['_Springer']['cif_string_old'])
+            # print new_cif_string
+            try:
+                struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
+                # struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
+            except Exception as e:
+                print e
+                print 'ERROR parsing NEW structure!'
+                continue
+            print 'Structure composition = {}'.format(struct_comp)
+            try:
+                formula_comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula']).get_el_amt_dict()
+            except Exception as e:
+                print e
+                continue
+            print 'Formula composition = {}'.format(formula_comp)
+            missing_element = False
+            for element in formula_comp:
+                if element not in struct_comp:
+                    missing_element = True
+                    break
+            if missing_element:
+                print 'NO MATCH! - Element {} not in structure'.format(element)
+                continue
+            print 'SUCCESS'
+            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'structure': CifParser.from_string(
+            new_cif_string).get_structures()[0].as_dict()}}, upsert=False)
+            # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$rename': {'cif_string':
+            # 'metadata._Springer.cif_string_old'}})
+            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': new_cif_string}})
             remove_keys.append(doc['key'])
-            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$unset': {'structure': ''}})
-            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$addToSet': {'errors': 'cif missing one element data'}})
-        '''
-        # print doc['cif_string']
-        # new_cif_string = fix_incorrectlyparsedstructures_labels(doc['cif_string'])
-        # new_cif_string = fix_incorrectlyparsedstructures_braclabels(doc['cif_string'])
-        # new_cif_string = fix_incorrectlyparsedstructures_sup(doc['cif_string'])
-        # print new_cif_string
-        try:
-            # struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
-            struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
-        except Exception as e:
-            print e
-            print 'ERROR parsing NEW structure!'
-            continue
-        print 'Structure composition = {}'.format(struct_comp)
-        try:
-            formula_comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula']).get_el_amt_dict()
-        except Exception as e:
-            print e
-            continue
-        print 'Formula composition = {}'.format(formula_comp)
-        missing_element = False
-        for element in formula_comp:
-            if element not in struct_comp:
-                missing_element = True
-                break
-        if missing_element:
-            print 'NO MATCH! - Element {} not in structure'.format(element)
-            continue
-        print 'SUCCESS'
-        # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'structure': CifParser.from_string(
-        # new_cif_string).get_structures()[0].as_dict()}}, upsert=False)
-        # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$rename': {'cif_string':
-        # 'metadata._Springer.cif_string_old'}})
-        # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': new_cif_string}})
-        remove_keys.append(doc['key'])
-        '''
+            '''
+            try:
+                formula_comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula']).get_el_amt_dict()
+            except Exception as e:
+                print e
+                continue
+            print 'Formula composition = {}'.format(formula_comp)
+            cif = CifFile.from_string(doc['cif_string']).data
+            for block in cif:
+                if 'standardized' in block:
+                    cif_stdblock = cif[block]
+                    break
+            missing_element_in_cif = False
+            for element in formula_comp:
+                if element not in cif_stdblock['_atom_site_type_symbol']:
+                    missing_element_in_cif = True
+                    break
+            if missing_element_in_cif:
+                print 'ELEMENT NOT IN CIF!'
+                remove_keys.append(doc['key'])
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$unset': {'structure': ''}})
+                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$addToSet': {'errors': 'cif missing one element data'}})
+            '''
     print 'FINISHED!'
     print remove_keys
     print len(remove_keys)
