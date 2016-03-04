@@ -63,7 +63,7 @@ if __name__ == '__main__':
         d += 1
         print '#######'
         print 'On record # {} and key {}'.format(d, incorrect_doc['key'])
-        for parsed_doc in db['pauling_file_unique_Parse'].find_one({'key': incorrect_doc['key']}):
+        for parsed_doc in db['pauling_file_unique_Parse'].find({'key': incorrect_doc['key']}):
             doc = parsed_doc
         new_cif_string = fix_incorrectlyparsedstructures(doc['cif_string'])
         try:
