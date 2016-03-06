@@ -117,11 +117,12 @@ def handle_partialocclables(cif_string):
                     sum_exc_last = 0
                     for i in range(len(occupancies) - 1):
                         sum_exc_last += float(occupancies[i])
-                    occupancies[:-1] = str(1 - sum_exc_last)
+                    occupancies[-1] = str(1 - sum_exc_last)
                 for i in range(len(elems)):
                     oldline = line
                     old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
                     new_elemline_list = old_elemline.split()
+                    new_elemline_list[0] = elems[i]
                     new_elemline_list[7] = occupancies[i]
                     new_elemline_list.append('\n')
                     new_elemline = ' '.join(new_elemline_list)
@@ -245,9 +246,9 @@ def handle_unparsablespecies(cif_string):
 if __name__ == '__main__':
     d = 0
     remove_keys = []
-    for unparsable_doc in db['unparsable_sds'].find({'key': 'sd_1615905'}).sort('_id', pymongo.ASCENDING).skip(d):
-        if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
-            continue
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).limit(1):
+        # if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
+        #     continue
         d += 1
         print '#######'
         print 'On record # {} and key: {}'.format(d, unparsable_doc['key'])
@@ -261,33 +262,29 @@ if __name__ == '__main__':
                 # print structure
             except:
                 print 'Error in parsing'
-                new_cif_string = None
-                # cif_string_new = handle_insufficientpowderdata(doc['cif_string'])
+                # print doc['cif_string']
                 new_cif_string = handle_partialocclables(doc['cif_string'])
-                new_cif_string = handle_unparsablespecies(new_cif_string)
-                if new_cif_string is not None:
-                    '''
-                    db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
-                        '$set': {'structure': CifParser.from_string(cif_string_new).get_structures()[0].as_dict()}},
-                                                           upsert=False)
-                    db['pauling_file_unique_Parse'].update({'key': doc['key']},
-                                                               {'$rename': {'cif_string':
-                                                               'metadata._Springer.cif_string_old'}})
-                    db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string':
-                    cif_string_new}})
-                    '''
-                    remove_keys.append(doc['key'])
-                    print 'DONE!'
+                # new_cif_string = handle_unparsablespecies(new_cif_string)
+                print new_cif_string
+                try:
+                    struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
+                    # struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
+                except Exception as e:
+                    print e
+                    print 'ERROR parsing NEW structure!'
+                    continue
+                # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
+                #     '$set': {'structure': CifParser.from_string(new_cif_string).get_structures()[0].as_dict()}},
+                #                                        upsert=False)
+                # db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                #                                            {'$rename': {'cif_string':
+                #                                            'metadata._Springer.cif_string_old'}})
+                # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string':
+                # new_cif_string}})
+                remove_keys.append(doc['key'])
+                print 'DONE!'
     print remove_keys
     print len(remove_keys)
     # for key in remove_keys:
     #     db['unparsable_sds'].remove({'key': key})
 ##########
-'''
-                try:
-                except:
-                    print 'STILL COULD NOT PARSE STRUCTURE. ADDING TO LIST OF UNPARSABLE_SDS'
-                    print(traceback.format_exc())
-                print '-----------------------------'
-                    print unparsable_sds_removal
-'''
