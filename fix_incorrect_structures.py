@@ -1,8 +1,8 @@
 import pymongo
-from pymatgen.io.cif import CifParser, CifFile, CifBlock, CifWriter
+from pymatgen.io.cif import CifParser, CifFile
 import re
 import json
-from pymatgen import Composition, Structure
+from pymatgen import Composition
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -202,6 +202,29 @@ def fix_incorrectlyparsedstructures_symbols(cif_string):
     return cif_string_new
 
 
+def fix_incorrectlyparsedstructures_manually(cif_string):
+    """
+    Fixes already parsed CIF files with random errors in them (used for last 8 incorrectly parsed structures).
+
+    :param cif_string: (str) cif file
+    :return: corrected cif string
+    """
+    cif_string_new = ''
+    cif = CifFile.from_string(cif_string).data
+    for block in cif:
+        if 'standardized' in block:
+            cif_stdblock = cif[block]
+            break
+    for i, sym in enumerate(cif_stdblock['_atom_site_type_symbol']):
+        if sym == 'Y':
+            cif_stdblock['_atom_site_occupancy'][i] = 0.5
+        elif sym == 'Nd':
+            cif_stdblock['_atom_site_occupancy'][i] = 0.5
+    for key in cif:
+        cif_string_new += str(cif[key]) + '\n'
+    return cif_string_new
+
+
 if __name__ == '__main__':
     d = 0
     remove_keys = []
@@ -212,14 +235,18 @@ if __name__ == '__main__':
         for parsed_doc in db['pauling_file_unique_Parse'].find({'key': incorrect_doc['key']}):
             doc = parsed_doc
         # if 'cif_string_old' in doc['metadata']['_Springer']:
-        # print doc['cif_string']
+        print doc['cif_string']
         # print doc['metadata']['_Springer']['cif_string_old']
+        # new_cif_string = fix_incorrectlyparsedstructures_labels(doc['metadata']['_Springer']['cif_string_old'])
+        # new_cif_string = fix_incorrectlyparsedstructures_manually(new_cif_string)
         # new_cif_string = fix_incorrectlyparsedstructures_sup(doc['metadata']['_Springer']['cif_string_old'])
+        # new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['metadata']['_Springer']['cif_string_old'])
         # new_cif_string = fix_incorrectlyparsedstructures_sup(doc['cif_string'])
-        new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['cif_string'])
+        # new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['cif_string'])
+        # print new_cif_string
         try:
-            struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
-            # struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
+            # struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
+            struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
         except Exception as e:
             print e
             print 'ERROR parsing NEW structure!'
