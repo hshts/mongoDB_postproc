@@ -40,7 +40,7 @@ def fix_incorrectlyparsedstructures_labels(cif_string):
                     sum_exc_last = 0
                     for i in range(len(occupancies) - 1):
                         sum_exc_last += float(occupancies[i])
-                    occupancies[:-1] = str(1 - sum_exc_last)
+                    occupancies[-1] = str(1 - sum_exc_last)
                 for i in range(len(elems)):
                     oldline = line
                     old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
@@ -217,10 +217,12 @@ def fix_incorrectlyparsedstructures_manually(cif_string):
             cif_stdblock = cif[block]
             break
     for i, sym in enumerate(cif_stdblock['_atom_site_type_symbol']):
-        if sym == 'Y':
-            cif_stdblock['_atom_site_occupancy'][i] = 0.5
-        elif sym == 'Nd':
-            cif_stdblock['_atom_site_occupancy'][i] = 0.5
+        if sym == 'Mn':
+            cif_stdblock['_atom_site_occupancy'][i] = 0.76
+        elif sym == 'Ti':
+            cif_stdblock['_atom_site_occupancy'][i] = 0.12
+        elif sym == 'V':
+            cif_stdblock['_atom_site_occupancy'][i] = 0.12
     for key in cif:
         cif_string_new += str(cif[key]) + '\n'
         cif_string_new += '\n'
@@ -239,12 +241,13 @@ if __name__ == '__main__':
         # if 'cif_string_old' in doc['metadata']['_Springer']:
         # print doc['cif_string']
         # print doc['metadata']['_Springer']['cif_string_old']
-        # new_cif_string = fix_incorrectlyparsedstructures_labels(doc['metadata']['_Springer']['cif_string_old'])
-        # new_cif_string = fix_incorrectlyparsedstructures_manually(new_cif_string)
+        new_cif_string = fix_incorrectlyparsedstructures_labels(doc['metadata']['_Springer']['cif_string_old'])
+        new_cif_string = fix_incorrectlyparsedstructures_manually(new_cif_string)
+        # new_cif_string = fix_incorrectlyparsedstructures_symbols(new_cif_string)
         # new_cif_string = fix_incorrectlyparsedstructures_sup(doc['metadata']['_Springer']['cif_string_old'])
         # new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['metadata']['_Springer']['cif_string_old'])
         # new_cif_string = fix_incorrectlyparsedstructures_sup(doc['cif_string'])
-        new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['cif_string'])
+        # new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['cif_string'])
         print new_cif_string
         try:
             struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
@@ -274,16 +277,10 @@ if __name__ == '__main__':
         # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$rename': {'cif_string':
         # 'metadata._Springer.cif_string_old'}})
         # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': new_cif_string}})
+        # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$addToSet': {'errors': 'incorrect occupancies in cif file'}})
+        # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$unset': {'structure': ''}})
         remove_keys.append(doc['key'])
         #####################
-        '''
-        if missing_element_in_cif:
-            print 'ELEMENT NOT IN CIF!'
-            remove_keys.append(doc['key'])
-            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$unset': {'structure': ''}})
-            db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$addToSet': {'errors': 'cif missing one
-            element data'}})
-        '''
     print 'FINISHED!'
     print remove_keys
     print len(remove_keys)
