@@ -199,6 +199,7 @@ def fix_incorrectlyparsedstructures_symbols(cif_string):
             cif_stdblock['_atom_site_label'][i] = sym
     for key in cif:
         cif_string_new += str(cif[key]) + '\n'
+        cif_string_new += '\n'
     return cif_string_new
 
 
@@ -222,6 +223,7 @@ def fix_incorrectlyparsedstructures_manually(cif_string):
             cif_stdblock['_atom_site_occupancy'][i] = 0.5
     for key in cif:
         cif_string_new += str(cif[key]) + '\n'
+        cif_string_new += '\n'
     return cif_string_new
 
 
@@ -235,18 +237,18 @@ if __name__ == '__main__':
         for parsed_doc in db['pauling_file_unique_Parse'].find({'key': incorrect_doc['key']}):
             doc = parsed_doc
         # if 'cif_string_old' in doc['metadata']['_Springer']:
-        print doc['cif_string']
+        # print doc['cif_string']
         # print doc['metadata']['_Springer']['cif_string_old']
         # new_cif_string = fix_incorrectlyparsedstructures_labels(doc['metadata']['_Springer']['cif_string_old'])
         # new_cif_string = fix_incorrectlyparsedstructures_manually(new_cif_string)
         # new_cif_string = fix_incorrectlyparsedstructures_sup(doc['metadata']['_Springer']['cif_string_old'])
         # new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['metadata']['_Springer']['cif_string_old'])
         # new_cif_string = fix_incorrectlyparsedstructures_sup(doc['cif_string'])
-        # new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['cif_string'])
-        # print new_cif_string
+        new_cif_string = fix_incorrectlyparsedstructures_symbols(doc['cif_string'])
+        print new_cif_string
         try:
-            # struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
-            struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
+            struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
+            # struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
         except Exception as e:
             print e
             print 'ERROR parsing NEW structure!'
