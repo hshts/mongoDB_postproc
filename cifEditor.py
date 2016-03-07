@@ -182,33 +182,37 @@ def handle_unparsablespecies(cif_string):
     Handles CIF parsing errors arising from unrecognizable species
 
     :param cif_string: (str) cif file
-    :return: corrected cif string
+    :return: pymatgen structure object with appended unparsable species
     """
     cif_string_new = ''
+    symbols =[]
+    coords = []
+    occupancies = []
     cif = CifFile.from_string(cif_string).data
     for block in cif:
         if 'standardized' in block:
             cif_stdblock = cif[block]
             break
-    # print cif_stdblock
     for i, sym in enumerate(cif_stdblock['_atom_site_type_symbol']):
-        if sym == 'OH':
+        if 'OH' in sym:
             print sym
-            # print cif_stdblock['_atom_site_fract_x'][i]
-            # print cif_stdblock['_atom_site_fract_y'][i]
-            # print cif_stdblock['_atom_site_fract_z'][i]
-            # print cif_stdblock['_atom_site_occupancy'][i]
+            symbols.append(sym)
+            coords.append([float(cif_stdblock['_atom_site_fract_x'][i]), float(cif_stdblock['_atom_site_fract_y'][i]), float(cif_stdblock['_atom_site_fract_z'][i])])
+            occupancies.append(float(cif_stdblock['_atom_site_occupancy'][i]))
     for key in cif:
         cif_string_new += str(cif[key]) + '\n'
         cif_string_new += '\n'
-    return cif_string_new
+    new_struct = CifParser.from_string(cif_string_new).get_structures()[0]
+    for specie_no in range(len(symbols)):
+        new_struct.append({DummySpecie('X'): occupancies[specie_no]}, coords[specie_no], properties={"molecule": [symbols[specie_no]]})
+    return new_struct
 
 
 
 if __name__ == '__main__':
     d = 0
     remove_keys = []
-    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).limit(1):
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).skip(1).limit(1):
         # if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
         #     continue
         d += 1
@@ -221,17 +225,17 @@ if __name__ == '__main__':
         else:
             try:
                 structure = CifParser.from_string(doc['cif_string']).get_structures()[0].as_dict()
-                # print structure
             except:
                 print 'Error in parsing'
                 # print doc['cif_string']
                 new_cif_string = handle_partialocclables(doc['cif_string'])
-                new_cif_string = handle_unparsablespecies(new_cif_string)
-                # print new_cif_string
+                print new_cif_string
                 try:
-                    struct = CifParser.from_string(new_cif_string).get_structures()[0]
+                    # struct = CifParser.from_string(new_cif_string).get_structures()[0]
                     # struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
-                    struct.append(DummySpecie('X'), [0.31, 0.218, 0.25], properties={"molecule": [None, "OH"]})
+                    appended_struct = handle_unparsablespecies(new_cif_string)
+                    print appended_struct
+                    print appended_struct.composition, appended_struct.species_and_occu
                 except Exception as e:
                     print e
                     print 'ERROR parsing NEW structure!'
