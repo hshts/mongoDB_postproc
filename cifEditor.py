@@ -1,10 +1,9 @@
 import pymongo
 from pymatgen.io.cif import CifParser, CifFile
 import re
-import traceback
 import json
-from pymatgen import Structure, Element, DummySpecie, Composition
-import numpy as np
+from pymatgen import DummySpecie, Composition
+
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -99,7 +98,6 @@ def handle_partialocclables(cif_string):
     for line in cif_lines:
         if ' + ' in line and len(line) < 100:
             try:
-                # print line
                 newline = '#' + line
                 cif_string_new += newline + '\n'
                 matching_list = re.findall(r'\'(.+?)\'', line)
@@ -108,8 +106,12 @@ def handle_partialocclables(cif_string):
                 occupancies = []
                 for i in range(len(elemocc)):
                     occupancies.append('0' + re.findall('\.?\d+', elemocc[i].strip())[1])
-                    c = re.findall('\D+', elemocc[i].strip())
-                    elems.append(c[1])
+                    if 'OH' in elemocc[i]:
+                        c = re.findall('OH.*', elemocc[i].strip())
+                        elems.append(c[0])
+                    else:
+                        c = re.findall('\D+', elemocc[i].strip())
+                        elems.append(c[1])
                 occ_sum = 0
                 for i in range(len(occupancies)):
                     occ_sum += float(occupancies[i])
@@ -185,7 +187,7 @@ def handle_unparsablespecies(cif_string):
     :return: pymatgen structure object with appended unparsable species
     """
     cif_string_new = ''
-    symbols =[]
+    symbols = []
     coords = []
     occupancies = []
     cif = CifFile.from_string(cif_string).data
@@ -195,24 +197,24 @@ def handle_unparsablespecies(cif_string):
             break
     for i, sym in enumerate(cif_stdblock['_atom_site_type_symbol']):
         if 'OH' in sym:
-            print sym
             symbols.append(sym)
-            coords.append([float(cif_stdblock['_atom_site_fract_x'][i]), float(cif_stdblock['_atom_site_fract_y'][i]), float(cif_stdblock['_atom_site_fract_z'][i])])
+            coords.append([float(cif_stdblock['_atom_site_fract_x'][i]), float(cif_stdblock['_atom_site_fract_y'][i]),
+                           float(cif_stdblock['_atom_site_fract_z'][i])])
             occupancies.append(float(cif_stdblock['_atom_site_occupancy'][i]))
     for key in cif:
         cif_string_new += str(cif[key]) + '\n'
         cif_string_new += '\n'
     new_struct = CifParser.from_string(cif_string_new).get_structures()[0]
     for specie_no in range(len(symbols)):
-        new_struct.append({DummySpecie('X'): occupancies[specie_no]}, coords[specie_no], properties={"molecule": [symbols[specie_no]]})
+        new_struct.append({DummySpecie('X'): occupancies[specie_no]}, coords[specie_no],
+                          properties={"molecule": [symbols[specie_no]]})
     return new_struct
-
 
 
 if __name__ == '__main__':
     d = 0
     remove_keys = []
-    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).skip(1).limit(1):
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).limit(1):
         # if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
         #     continue
         d += 1
@@ -229,31 +231,34 @@ if __name__ == '__main__':
                 print 'Error in parsing'
                 # print doc['cif_string']
                 new_cif_string = handle_partialocclables(doc['cif_string'])
-                print new_cif_string
+                # print new_cif_string
                 try:
                     # struct = CifParser.from_string(new_cif_string).get_structures()[0]
-                    # struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
+                    # struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[
+                    # 0].composition.reduced_formula
                     appended_struct = handle_unparsablespecies(new_cif_string)
                     print appended_struct
-                    print appended_struct.composition, appended_struct.species_and_occu
                 except Exception as e:
                     print e
                     print 'ERROR parsing NEW structure!'
                     continue
                 try:
-                    formula_comp = Composition(doc['metadata']['_Springer']['geninfo']['Refined Formula']).get_el_amt_dict()
+                    formula_comp = Composition(
+                        doc['metadata']['_Springer']['geninfo']['Refined Formula']).get_el_amt_dict()
                 except Exception as e:
                     print e
                     continue
                 print 'Formula composition = {}'.format(formula_comp)
+                '''
                 missing_element = False
                 for element in formula_comp:
-                    if element not in struct.composition:
+                    if element not in appended_struct.composition:
                         missing_element = True
                         break
                 if missing_element:
                     print 'NO MATCH! - Element {} not in structure'.format(element)
                     continue
+                '''
                 # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
                 #     '$set': {'structure': CifParser.from_string(new_cif_string).get_structures()[0].as_dict()}},
                 #                                        upsert=False)
@@ -268,4 +273,4 @@ if __name__ == '__main__':
     print len(remove_keys)
     # for key in remove_keys:
     #     db['unparsable_sds'].remove({'key': key})
-##########
+    ##########
