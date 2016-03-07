@@ -213,7 +213,7 @@ def handle_unparsablespecies(cif_string):
 if __name__ == '__main__':
     d = 0
     remove_keys = []
-    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d):
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).limit(1):
         if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
             continue
         d += 1
@@ -266,13 +266,13 @@ if __name__ == '__main__':
                 #                                            'metadata._Springer.cif_string_old'}})
                 # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string':
                 # new_cif_string}})
-                db['pauling_file_unique_Parse'].update({'key': doc['key']},
-                                                       {'$set': {'structure': appended_struct.as_dict()}}, upsert=False)
-                db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': new_cif_string}})
+                # db['pauling_file_unique_Parse'].update({'key': doc['key']},
+                #                                        {'$set': {'structure': appended_struct.as_dict()}}, upsert=False)
+                # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {'$set': {'cif_string': new_cif_string}})
                 remove_keys.append(doc['key'])
                 print 'DONE!'
     print remove_keys
     print len(remove_keys)
-    for key in remove_keys:
-        db['unparsable_sds'].remove({'key': key})
+    # for key in remove_keys:
+    #     db['unparsable_sds'].remove({'key': key})
     ##########
