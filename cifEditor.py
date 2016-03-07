@@ -1,10 +1,10 @@
 import pymongo
-from pymatgen.io.cif import CifParser
+from pymatgen.io.cif import CifParser, CifFile
 import re
 import traceback
 import json
-from pymatgen import Structure, Element, DummySpecie
-
+from pymatgen import Structure, Element, DummySpecie, Composition
+import numpy as np
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -131,13 +131,7 @@ def handle_partialocclables(cif_string):
                 break
         else:
             cif_string_new += line + '\n'
-    # print cif_string_new
-    try:
-        print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
-        return cif_string_new
-    except:
-        print 'UNSUCCESSFUL - Could not correct partial occupancy numbers (w/o brackets)'
-        return cif_string_new
+    return cif_string_new
 
 
 def handle_partialoccbracketlables(cif_string):
@@ -180,12 +174,7 @@ def handle_partialoccbracketlables(cif_string):
                 cif_string_new += new_elemline
         else:
             cif_string_new += line + '\n'
-    # print cif_string_new
-    try:
-        print CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
-        return cif_string_new
-    except:
-        print 'UNSUCCESSFUL - Could not correct partial occupancy numbers (with brackets)'
+    return cif_string_new
 
 
 def handle_unparsablespecies(cif_string):
@@ -195,53 +184,26 @@ def handle_unparsablespecies(cif_string):
     :param cif_string: (str) cif file
     :return: corrected cif string
     """
-    cif_lines = json.loads(json.dumps(cif_string)).splitlines()
     cif_string_new = ''
-    for line in cif_lines:
-        if 'OH' in line.upper():
-            try:
-                print line
-                newline = '#' + line
-                cif_string_new += newline + '\n'
-                '''
-                matching_list = re.findall(r'\'(.+?)\'', line)
-                elemocc = matching_list[0].split('+')
-                elems = []
-                occupancies = []
-                for i in range(len(elemocc)):
-                    occupancies.append('0' + re.findall('\.?\d+', elemocc[i].strip())[1])
-                    c = re.findall('\D+', elemocc[i].strip())
-                    elems.append(c[1])
-                occ_sum = 0
-                for i in range(len(occupancies)):
-                    occ_sum += float(occupancies[i])
-                if occ_sum != 1:
-                    sum_exc_last = 0
-                    for i in range(len(occupancies) - 1):
-                        sum_exc_last += float(occupancies[i])
-                    occupancies[:-1] = str(1 - sum_exc_last)
-                for i in range(len(elems)):
-                    oldline = line
-                    old_elemline = oldline.replace("'" + matching_list[0] + "'", "'" + elems[i] + "'")
-                    new_elemline_list = old_elemline.split()
-                    new_elemline_list[7] = occupancies[i]
-                    new_elemline_list.append('\n')
-                    new_elemline = ' '.join(new_elemline_list)
-                    cif_string_new += new_elemline
-                    '''
-            except:
-                break
-        else:
-            cif_string_new += line + '\n'
-    try:
-        struc = CifParser.from_string(cif_string_new).get_structures()[0].as_dict()
-        # new_species = DummySpecie(symbol='XOH2')
-        # struc.append(DummySpecie(symbol='XOH2'), [0, 0, 0])
-        print struc
-        return cif_string_new
-    except:
-        print 'UNSUCCESSFUL - Could not correct addition of species'
-        return cif_string_new
+    cif = CifFile.from_string(cif_string).data
+    for block in cif:
+        if 'standardized' in block:
+            cif_stdblock = cif[block]
+            break
+    # print cif_stdblock
+    for i, sym in enumerate(cif_stdblock['_atom_site_type_symbol']):
+        if sym == 'OH':
+            print sym
+            # print cif_stdblock['_atom_site_fract_x'][i]
+            # print cif_stdblock['_atom_site_fract_y'][i]
+            # print cif_stdblock['_atom_site_fract_z'][i]
+            # print cif_stdblock['_atom_site_occupancy'][i]
+    for key in cif:
+        cif_string_new += str(cif[key]) + '\n'
+        cif_string_new += '\n'
+    return cif_string_new
+
+
 
 if __name__ == '__main__':
     d = 0
@@ -264,14 +226,29 @@ if __name__ == '__main__':
                 print 'Error in parsing'
                 # print doc['cif_string']
                 new_cif_string = handle_partialocclables(doc['cif_string'])
-                # new_cif_string = handle_unparsablespecies(new_cif_string)
-                print new_cif_string
+                new_cif_string = handle_unparsablespecies(new_cif_string)
+                # print new_cif_string
                 try:
-                    struct_comp = CifParser.from_string(new_cif_string).get_structures()[0].composition.reduced_formula
+                    struct = CifParser.from_string(new_cif_string).get_structures()[0]
                     # struct_comp = CifParser.from_string(doc['cif_string']).get_structures()[0].composition.reduced_formula
+                    struct.append(DummySpecie('X'), [0.31, 0.218, 0.25], properties={"molecule": [None, "OH"]})
                 except Exception as e:
                     print e
                     print 'ERROR parsing NEW structure!'
+                    continue
+                try:
+                    formula_comp = Composition(doc['metadata']['_Springer']['geninfo']['Refined Formula']).get_el_amt_dict()
+                except Exception as e:
+                    print e
+                    continue
+                print 'Formula composition = {}'.format(formula_comp)
+                missing_element = False
+                for element in formula_comp:
+                    if element not in struct.composition:
+                        missing_element = True
+                        break
+                if missing_element:
+                    print 'NO MATCH! - Element {} not in structure'.format(element)
                     continue
                 # db['pauling_file_unique_Parse'].update({'key': doc['key']}, {
                 #     '$set': {'structure': CifParser.from_string(new_cif_string).get_structures()[0].as_dict()}},
