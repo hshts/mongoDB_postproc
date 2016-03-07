@@ -95,7 +95,7 @@ def handle_partialocclables(cif_string):
     cif_lines = json.loads(json.dumps(cif_string)).splitlines()
     cif_string_new = ''
     for line in cif_lines:
-        if ' + ' in line and len(line) < 100:
+        if ' + ' in line and len(line) < 150:
             try:
                 newline = '#' + line
                 cif_string_new += newline + '\n'
@@ -213,9 +213,9 @@ def handle_unparsablespecies(cif_string):
 if __name__ == '__main__':
     d = 0
     remove_keys = []
-    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d).limit(1):
-        # if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
-        #     continue
+    for unparsable_doc in db['unparsable_sds'].find().sort('_id', pymongo.ASCENDING).skip(d):
+        if unparsable_doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436']:
+            continue
         d += 1
         print '#######'
         print 'On record # {} and key: {}'.format(d, unparsable_doc['key'])
@@ -241,6 +241,7 @@ if __name__ == '__main__':
                     print e
                     print 'ERROR parsing NEW structure!'
                     continue
+                '''
                 try:
                     formula_comp = Composition(
                         doc['metadata']['_Springer']['geninfo']['Refined Formula']).get_el_amt_dict()
@@ -248,7 +249,6 @@ if __name__ == '__main__':
                     print e
                     continue
                 print 'Formula composition = {}'.format(formula_comp)
-                '''
                 missing_element = False
                 for element in formula_comp:
                     if element not in appended_struct.composition:
