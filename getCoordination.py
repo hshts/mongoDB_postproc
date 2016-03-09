@@ -7,6 +7,7 @@ db = client.springer
 
 
 def getcoordination(filename):
+    print 'Starting with structure from {}'.format(filename)
     struct = Structure.from_file(filename)
     species = []
     species_coord = {}
