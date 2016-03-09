@@ -35,14 +35,9 @@ def insert_states(state, collname):
             except:
                 print '{} Density parsing error'.format(st)
                 density = None
-            if st == 'hp':
-                newcoll.insert(
-                    {'key': doc['key'], 'composition': str(comp), 'hp': 'Yes', 'ht': 'No', 'space_group': space_group,
-                     'density': density, 'property': 1})
-            elif st == 'ht':
-                newcoll.insert(
-                    {'key': doc['key'], 'composition': str(comp), 'hp': 'No', 'ht': 'Yes', 'space_group': space_group,
-                     'density': density, 'property': 1})
+            newcoll.insert(
+                {'key': doc['key'], 'composition': str(comp), st: 'Yes', 'space_group': space_group, 'density': density,
+                 'property': 1})
     print '{} DONE!'.format(st)
     print len(keys)
     gs_compositions = []
@@ -67,20 +62,19 @@ def insert_states(state, collname):
                 except:
                     print 'GS Density parsing error'
                     density = None
-                newcoll.insert(
-                    {'key': doc['key'], 'composition': str(comp), 'hp': 'No', 'ht': 'No', 'space_group': space_group,
-                     'density': density, 'property': 1})
+                newcoll.insert({'key': doc['key'], 'composition': str(comp), st: 'No', 'space_group': space_group,
+                                'density': density, 'property': 1})
     print 'GS DONE!'
     print len(gs_compositions)
 
 
 if __name__ == '__main__':
-    insert_states('hp', 'hp_analysePauling')
-    insert_states('ht', 'ht_analysePauling')
-    hp_cursor = db['hp_analysePauling'].find()
+    insert_states('hp', 'hp')
+    insert_states('ht', 'ht')
+    hp_cursor = db['hp'].find()
     hp_df = pd.DataFrame(list(hp_cursor))
     print hp_df.head(20)
-    ht_cursor = db['ht_analysePauling'].find()
+    ht_cursor = db['ht'].find()
     ht_df = pd.DataFrame(list(ht_cursor))
     print ht_df.head(20)
     sns.set_style('whitegrid')
