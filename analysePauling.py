@@ -9,14 +9,12 @@ db = client.springer
 coll = db['pauling_file']
 
 
-def insert_states(state, state_keys):
+def insert_states(state, incl_keys, excl_keys):
     newcoll = db[state]
     newcoll.drop()
     compositions = []
-    cursor = db[state + '_keys'].find()
-    keys_df = pd.DataFrame(list(cursor))
     x = 0
-    for key in state_keys:
+    for key in incl_keys:
         x += 1
         if x % 1000 == 0:
             print x
@@ -44,7 +42,7 @@ def insert_states(state, state_keys):
         y += 1
         if y % 1000 == 0:
             print y
-        if 'structure' in doc and doc['key'] not in keys:
+        if 'structure' in doc and doc['key'] not in excl_keys:
             comp = Structure.from_dict(doc['structure']).composition.reduced_formula
             # comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula'])
             if comp in compositions:
@@ -94,21 +92,27 @@ def insert_statekeys(state):
 
 
 if __name__ == '__main__':
-    props = ['hp', 'ht', 'lt']
+    all_keys = {}
+    props = ['hp', 'ht']
     for prop in props:
-        insert_statekeys(prop)
-    # all_statekeys[prop] = pd.DataFrame
-    # insert_states('hp')
-    # insert_states('ht')
-    # hp_cursor = db['hp'].find()
-    # hp_df = pd.DataFrame(list(hp_cursor))
-    # print hp_df.head(20)
-    # ht_cursor = db['ht'].find()
-    # ht_df = pd.DataFrame(list(ht_cursor))
-    # print ht_df.head(20)
-    # sns.set_style('whitegrid')
-    # sns.violinplot(x='property', y='space_group', hue='hp', data=hp_df, palette='muted', split=True, inner='stick')
-    # plt.show()
+        col = prop + '_keys'
+        cursor = db[col].find()
+        df = pd.DataFrame(list(cursor))
+        all_keys[prop] = df['key'].tolist()
+    for prop in all_keys:
+        in_keys = all_keys[prop]
+        out_keys = []
+        for other_key in all_keys:
+            if other_key != prop:
+                out_keys += all_keys[other_key]
+        print prop, len(in_keys), len(out_keys)
+        insert_states(prop, in_keys, out_keys)
+        cursor = db[prop].find()
+        df = pd.DataFrame(list(cursor))
+        print df.head(20)
+        sns.set_style('whitegrid')
+        sns.violinplot(x='property', y='space_group', hue=prop, data=df, palette='muted', split=True, inner='stick')
+        plt.show()
     # sns.violinplot(x='property', y='space_group', hue='ht', data=ht_df, palette='muted', split=True, inner='stick')
     # sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
     # plt.show()
