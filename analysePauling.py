@@ -12,7 +12,7 @@ coll = db['pauling_file']
 def insert_states(state, incl_keys, excl_keys):
     newcoll = db[state]
     newcoll.drop()
-    compositions = []
+    state_compositions = {}
     x = 0
     for key in incl_keys:
         x += 1
@@ -22,20 +22,8 @@ def insert_states(state, incl_keys, excl_keys):
             if 'structure' in doc:
                 comp = Structure.from_dict(doc['structure']).composition.reduced_formula
                 # comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula'])
-                compositions.append(comp)
-                try:
-                    space_group = int(doc['metadata']['_Springer']['geninfo']['Space Group'])
-                except:
-                    print '{} Space group parsing error'.format(state)
-                    space_group = None
-                try:
-                    density = float(doc['metadata']['_Springer']['geninfo']['Density'].split()[2])
-                except:
-                    print '{} Density parsing error'.format(state)
-                    density = None
-                newcoll.insert({'key': doc['key'], 'composition': str(comp), state: 'Yes', 'space_group': space_group,
-                                'density': density, 'property': 1})
-    print '{} DONE!'.format(state)
+                state_compositions[comp] = key
+    print 'Collecting composition-key pairs for {} state done'.format(state)
     gs_compositions = []
     y = 0
     for doc in coll.find().batch_size(75).limit(5000):
@@ -45,7 +33,7 @@ def insert_states(state, incl_keys, excl_keys):
         if 'structure' in doc and doc['key'] not in excl_keys:
             comp = Structure.from_dict(doc['structure']).composition.reduced_formula
             # comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula'])
-            if comp in compositions:
+            if comp in state_compositions:
                 print 'MATCH!', doc['key'], comp
                 gs_compositions.append(comp)
                 try:
@@ -62,6 +50,23 @@ def insert_states(state, incl_keys, excl_keys):
                                 'density': density, 'property': 1})
     print 'GS DONE!'
     print len(gs_compositions)
+    for st_comp in state_compositions:
+        if st_comp in gs_compositions:
+            common_key = state_compositions[st_comp]
+            for doc in coll.find({'key': common_key}):
+                try:
+                    space_group = int(doc['metadata']['_Springer']['geninfo']['Space Group'])
+                except:
+                    print '{} Space group parsing error'.format(state)
+                    space_group = None
+                try:
+                    density = float(doc['metadata']['_Springer']['geninfo']['Density'].split()[2])
+                except:
+                    print '{} Density parsing error'.format(state)
+                    density = None
+                newcoll.insert({'key': doc['key'], 'composition': str(st_comp), state: 'Yes', 'space_group': space_group,
+                                'density': density, 'property': 1})
+    print '{} DONE!'.format(state)
 
 
 def insert_statekeys(state):
@@ -110,12 +115,31 @@ if __name__ == '__main__':
         cursor = db[prop].find()
         df = pd.DataFrame(list(cursor))
         print df.head(20)
-        sns.set_style('whitegrid')
-        sns.violinplot(x='property', y='space_group', hue=prop, data=df, palette='muted', split=True, inner='stick')
-        plt.show()
-    # sns.violinplot(x='property', y='space_group', hue='ht', data=ht_df, palette='muted', split=True, inner='stick')
+        # sns.set_style('whitegrid')
+        # sns.violinplot(x='property', y='space_group', hue=prop, data=df, palette='muted', split=True, inner='stick')
+        # plt.show()
     # sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
     # plt.show()
     # tips = sns.load_dataset("tips")
     # print tips.head()
     # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
+'''
+    props = ['hp', 'ht']
+    for prop in props:
+        cursor = db[prop].find()
+        df = pd.DataFrame(list(cursor))
+        print df.groupby(['composition', prop]).size()
+        df_mean = df.groupby(['composition', prop], as_index=False).mean()
+        print df_mean
+        sns.set_style('whitegrid')
+        sns.violinplot(x='property', y='space_group', hue=prop, data=df_mean, palette='muted', split=True, inner='stick')
+        plt.show()
+        # x = 0
+        # for doc in db[prop].find().batch_size(75):
+        #     if doc[prop] == 'Yes':
+        #         if db[prop].find({'composition': doc['composition'], prop: 'No'}).count() > 0:
+        #             x += 1
+        # print 'No. of docs with both Yes/No present = {}'.format(x)
+'''
+
+
