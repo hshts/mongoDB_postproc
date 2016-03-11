@@ -2,7 +2,7 @@ import pymongo
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from pymatgen import Structure, Composition
+from pymatgen import Structure
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -26,7 +26,7 @@ def insert_states(state, incl_keys, excl_keys):
     print 'Collecting composition-key pairs for {} state done'.format(state)
     gs_compositions = []
     y = 0
-    for doc in coll.find().batch_size(75).limit(5000):
+    for doc in coll.find().batch_size(75):
         y += 1
         if y % 1000 == 0:
             print y
@@ -97,6 +97,8 @@ def insert_statekeys(state):
 
 
 if __name__ == '__main__':
+    '''
+    ##### CREATION OF 'hp' AND 'ht' COLLECTIONS
     all_keys = {}
     props = ['hp', 'ht']
     for prop in props:
@@ -115,31 +117,36 @@ if __name__ == '__main__':
         cursor = db[prop].find()
         df = pd.DataFrame(list(cursor))
         print df.head(20)
-        # sns.set_style('whitegrid')
-        # sns.violinplot(x='property', y='space_group', hue=prop, data=df, palette='muted', split=True, inner='stick')
-        # plt.show()
-    # sns.violinplot(x='property', y='density', hue='hp', data=df, palette='muted', split=True, inner='stick')
-    # plt.show()
-    # tips = sns.load_dataset("tips")
-    # print tips.head()
-    # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
-'''
+    '''
+    pd.set_option('display.width', 1000)
     props = ['hp', 'ht']
     for prop in props:
         cursor = db[prop].find()
         df = pd.DataFrame(list(cursor))
-        print df.groupby(['composition', prop]).size()
-        df_mean = df.groupby(['composition', prop], as_index=False).mean()
-        print df_mean
-        sns.set_style('whitegrid')
-        sns.violinplot(x='property', y='space_group', hue=prop, data=df_mean, palette='muted', split=True, inner='stick')
+        df_groupby = df.groupby(['composition', prop], as_index=False).median()
+        df_groupby = df_groupby.groupby(prop, as_index=False)
+        print df_groupby.head(3)
+        df_groupby_no = pd.DataFrame
+        df_groupby_yes = pd.DataFrame
+        for name, group in df_groupby:
+            if name == 'No':
+                df_groupby_no = group
+            elif name == 'Yes':
+                df_groupby_yes = group
+        print df_groupby_no.head(5)
+        print df_groupby_yes.head(5)
+        df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
+        print df_merge.head(5)
+        df_merge.plot(x='density_x', y='density_y', kind='scatter')
+        df_merge.plot(x='space_group_x', y='space_group_y', kind='scatter')
         plt.show()
-        # x = 0
-        # for doc in db[prop].find().batch_size(75):
-        #     if doc[prop] == 'Yes':
-        #         if db[prop].find({'composition': doc['composition'], prop: 'No'}).count() > 0:
-        #             x += 1
-        # print 'No. of docs with both Yes/No present = {}'.format(x)
-'''
+        # sns.set_style('whitegrid')
+        # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
+        # plt.show()
+        # sns.violinplot(x='property', y='density', hue=prop, data=df_med, palette='muted', split=True)
+        # plt.show()
+        # tips = sns.load_dataset("tips")
+        # print tips.head()
+        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
