@@ -125,7 +125,6 @@ if __name__ == '__main__':
         df = pd.DataFrame(list(cursor))
         df_groupby = df.groupby(['composition', prop], as_index=False).median()
         df_groupby = df_groupby.groupby(prop, as_index=False)
-        print df_groupby.head(3)
         df_groupby_no = pd.DataFrame
         df_groupby_yes = pd.DataFrame
         for name, group in df_groupby:
@@ -133,13 +132,15 @@ if __name__ == '__main__':
                 df_groupby_no = group
             elif name == 'Yes':
                 df_groupby_yes = group
-        print df_groupby_no.head(5)
-        print df_groupby_yes.head(5)
         df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
-        print df_merge.head(5)
-        df_merge.plot(x='density_x', y='density_y', kind='scatter')
-        df_merge.plot(x='space_group_x', y='space_group_y', kind='scatter')
-        plt.show()
+        print df_merge.head(10)
+        plot_props = ['density', 'space_group']
+        for prop in plot_props:
+            fig, ax = plt.subplots()
+            for k, v in df_merge.iterrows():
+                ax.text(v[prop + '_x'], v[prop + '_y'], v['composition'])
+            df_merge.plot(x=prop + '_x', y=prop + '_y', kind='scatter', ax=ax)
+            plt.show()
         # sns.set_style('whitegrid')
         # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
         # plt.show()
