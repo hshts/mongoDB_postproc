@@ -121,8 +121,18 @@ def make_state():
         df = pd.DataFrame(list(cursor))
         print df.head(20)
 
+def add_desc_column():
+    """
+    Add a descriptor column to the hp/ht collections
+    :return:
+    """
 
-if __name__ == '__main__':
+
+def plot_results():
+    """
+
+    :return:
+    """
     pd.set_option('display.width', 1000)
     props = ['hp', 'ht']
     for prop in props:
@@ -162,3 +172,7 @@ if __name__ == '__main__':
             # tips = sns.load_dataset("tips")
             # print tips.head()
             # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
+
+
+if __name__ == '__main__':
+    plot_results()
