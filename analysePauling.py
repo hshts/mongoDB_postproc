@@ -97,9 +97,11 @@ def insert_statekeys(state):
     print 'Number of "T =" keys not in ht/lt tags = {}'.format(y)
 
 
-if __name__ == '__main__':
-    '''
-    ##### CREATION OF 'hp' AND 'ht' COLLECTIONS
+def make_state():
+    """
+        ##### CREATION OF 'hp' AND 'ht' COLLECTIONS
+    :return:
+    """
     all_keys = {}
     props = ['hp', 'ht']
     for prop in props:
@@ -118,7 +120,9 @@ if __name__ == '__main__':
         cursor = db[prop].find()
         df = pd.DataFrame(list(cursor))
         print df.head(20)
-    '''
+
+
+if __name__ == '__main__':
     pd.set_option('display.width', 1000)
     props = ['hp', 'ht']
     for prop in props:
@@ -141,7 +145,12 @@ if __name__ == '__main__':
         for prop in plot_props:
             fig, ax = plt.subplots()
             for k, v in df_merge.iterrows():
-                if (abs(v[prop + '_y'] - v[prop + '_x'])) / v[prop + '_x'] > 0.5:
+                if prop == 'density':
+                    label_cutoff = 0.5
+                # elif prop == 'space_group':
+                else:
+                    label_cutoff = 0.75
+                if (abs(v[prop + '_y'] - v[prop + '_x'])) / v[prop + '_x'] > label_cutoff:
                     ax.text(v[prop + '_x'], v[prop + '_y'], v['composition'])
             df_merge.plot(x=prop + '_x', y=prop + '_y', kind='scatter', ax=ax)
             plt.show()
