@@ -3,6 +3,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from pymatgen import Structure
+from getcoordination import getcoordination
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -97,7 +98,7 @@ def insert_statekeys(state):
     print 'Number of "T =" keys not in ht/lt tags = {}'.format(y)
 
 
-def make_state():
+def make_state_colls():
     """
         ##### CREATION OF 'hp' AND 'ht' COLLECTIONS
     :return:
@@ -121,11 +122,22 @@ def make_state():
         df = pd.DataFrame(list(cursor))
         print df.head(20)
 
+
 def add_desc_column():
     """
     Add a descriptor column to the hp/ht collections
     :return:
     """
+    pd.set_option('display.width', 1000)
+    props = ['hp', 'ht']
+    for prop in props:
+        for document in db[prop].find().batch_size(75).limit(2):
+            for doc in db['pauling_file'].find({'key': document['key']}):
+                try:
+                    coord_dict = getcoordination(Structure.from_dict(doc['structure']))
+                    print coord_dict
+                except AttributeError:
+                    print 'Attribute error for key {}!'.format(doc['key'])
 
 
 def plot_results():
@@ -152,17 +164,17 @@ def plot_results():
         print df_merge.loc[df_merge['composition'].isin(
             ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
         plot_props = ['density', 'space_group']
-        for prop in plot_props:
+        for pro in plot_props:
             fig, ax = plt.subplots()
             for k, v in df_merge.iterrows():
-                if prop == 'density':
+                if pro == 'density':
                     label_cutoff = 0.5
-                # elif prop == 'space_group':
+                # elif pro == 'space_group':
                 else:
                     label_cutoff = 0.75
-                if (abs(v[prop + '_y'] - v[prop + '_x'])) / v[prop + '_x'] > label_cutoff:
-                    ax.text(v[prop + '_x'], v[prop + '_y'], v['composition'])
-            df_merge.plot(x=prop + '_x', y=prop + '_y', kind='scatter', ax=ax)
+                if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
+                    ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
+            df_merge.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax)
             plt.show()
             # sns.set_style('whitegrid')
             # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
@@ -175,4 +187,4 @@ def plot_results():
 
 
 if __name__ == '__main__':
-    plot_results()
+    add_desc_column()
