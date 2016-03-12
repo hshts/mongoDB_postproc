@@ -64,8 +64,9 @@ def insert_states(state, incl_keys, excl_keys):
                 except:
                     print '{} Density parsing error'.format(state)
                     density = None
-                newcoll.insert({'key': doc['key'], 'composition': str(st_comp), state: 'Yes', 'space_group': space_group,
-                                'density': density, 'property': 1})
+                newcoll.insert(
+                    {'key': doc['key'], 'composition': str(st_comp), state: 'Yes', 'space_group': space_group,
+                     'density': density, 'property': 1})
     print '{} DONE!'.format(state)
 
 
@@ -134,20 +135,21 @@ if __name__ == '__main__':
                 df_groupby_yes = group
         df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
         print df_merge.head(10)
+        print df_merge.loc[df_merge['composition'].isin(
+            ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
         plot_props = ['density', 'space_group']
         for prop in plot_props:
             fig, ax = plt.subplots()
             for k, v in df_merge.iterrows():
-                ax.text(v[prop + '_x'], v[prop + '_y'], v['composition'])
+                if (abs(v[prop + '_y'] - v[prop + '_x'])) / v[prop + '_x'] > 0.5:
+                    ax.text(v[prop + '_x'], v[prop + '_y'], v['composition'])
             df_merge.plot(x=prop + '_x', y=prop + '_y', kind='scatter', ax=ax)
             plt.show()
-        # sns.set_style('whitegrid')
-        # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
-        # plt.show()
-        # sns.violinplot(x='property', y='density', hue=prop, data=df_med, palette='muted', split=True)
-        # plt.show()
-        # tips = sns.load_dataset("tips")
-        # print tips.head()
-        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
-
-
+            # sns.set_style('whitegrid')
+            # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
+            # plt.show()
+            # sns.violinplot(x='property', y='density', hue=prop, data=df_med, palette='muted', split=True)
+            # plt.show()
+            # tips = sns.load_dataset("tips")
+            # print tips.head()
+            # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
