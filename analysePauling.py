@@ -125,14 +125,13 @@ def make_state_colls():
 
 def add_coordination_tocoll():
     """
-    Add a descriptor column to the hp/ht collections
+    Add a coordination number column to the hp/ht collections
     :return:
     """
-    pd.set_option('display.width', 1000)
     props = ['hp', 'ht']
     for prop in props:
         for document in db[prop].find().batch_size(75):
-            for doc in db['pauling_file'].find({'key': document['key']}):  ## Should be just 1 loop for 1 result
+            for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
                 try:
                     coord_dict = getcoordination(Structure.from_dict(doc['structure']))
                     print coord_dict
@@ -141,6 +140,27 @@ def add_coordination_tocoll():
                     print e
                     print 'Error for key {}!'.format(doc['key'])
 
+
+def add_numberdensity_tocoll():
+    """
+    Add a number density column to the hp/ht collections
+    :return:
+    """
+    props = ['hp', 'ht']
+    for prop in props:
+        x = 0
+        for document in db[prop].find().batch_size(75):
+            x += 1
+            if x % 1000 == 0:
+                print x
+            for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
+                try:
+                    structure = Structure.from_dict(doc['structure'])
+                    num_density = structure.num_sites/structure.volume
+                    db[prop].update({'key': document['key']}, {'$set': {'number_density': num_density}})
+                except Exception as e:
+                    print e
+                    print 'Error for key {}!'.format(doc['key'])
 
 
 def plot_results():
@@ -190,4 +210,5 @@ def plot_results():
 
 
 if __name__ == '__main__':
-    add_coordination_tocoll()
+    # add_coordination_tocoll()
+    add_numberdensity_tocoll()
