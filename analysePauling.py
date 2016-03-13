@@ -184,9 +184,9 @@ def plot_results():
                 df_groupby_yes = group
         df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
         print df_merge.head(10)
-        print df_merge.loc[df_merge['composition'].isin(
-            ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
-        plot_props = ['density', 'space_group']
+        # print df_merge.loc[df_merge['composition'].isin(
+        #     ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
+        plot_props = ['density', 'space_group', 'number_density']
         for pro in plot_props:
             fig, ax = plt.subplots()
             for k, v in df_merge.iterrows():
@@ -198,6 +198,8 @@ def plot_results():
                 if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
                     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
             df_merge.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax)
+            plt.xlabel(pro + ' of ground states')
+            plt.ylabel(pro + ' of excited states')
             plt.show()
             # sns.set_style('whitegrid')
             # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
@@ -211,4 +213,4 @@ def plot_results():
 
 if __name__ == '__main__':
     # add_coordination_tocoll()
-    add_numberdensity_tocoll()
+    plot_results()
