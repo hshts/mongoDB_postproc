@@ -123,7 +123,7 @@ def make_state_colls():
         print df.head(20)
 
 
-def add_desc_column():
+def add_coordination_tocoll():
     """
     Add a descriptor column to the hp/ht collections
     :return:
@@ -131,13 +131,16 @@ def add_desc_column():
     pd.set_option('display.width', 1000)
     props = ['hp', 'ht']
     for prop in props:
-        for document in db[prop].find().batch_size(75).limit(2):
-            for doc in db['pauling_file'].find({'key': document['key']}):
+        for document in db[prop].find().batch_size(75):
+            for doc in db['pauling_file'].find({'key': document['key']}):  ## Should be just 1 loop for 1 result
                 try:
                     coord_dict = getcoordination(Structure.from_dict(doc['structure']))
                     print coord_dict
-                except AttributeError:
-                    print 'Attribute error for key {}!'.format(doc['key'])
+                    db[prop].update({'key': document['key']}, {'$set': {'max_coordination': max(coord_dict.values())}})
+                except Exception as e:
+                    print e
+                    print 'Error for key {}!'.format(doc['key'])
+
 
 
 def plot_results():
@@ -187,4 +190,4 @@ def plot_results():
 
 
 if __name__ == '__main__':
-    add_desc_column()
+    add_coordination_tocoll()
