@@ -186,16 +186,16 @@ def group_merge_df(prop):
         try:
             coeff_lst = get_linear_thermal_expansion(row['composition'])
             df_merge.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
-            if np.mean(coeff_lst) < 10:
+            if np.mean(coeff_lst) < 20:
                 df_merge.loc[i, 'color'] = 'k'
-            elif 10 <= np.mean(coeff_lst) < 20:
-                df_merge.loc[i, 'color'] = 'r'
+            # elif 10 <= np.mean(coeff_lst) < 20:
+            #     df_merge.loc[i, 'color'] = 'r'
             elif np.mean(coeff_lst) >= 20:
-                df_merge.loc[i, 'color'] = 'g'
+                df_merge.loc[i, 'color'] = 'r'
             else:
-                df_merge.loc[i, 'color'] = 'b'
+                df_merge.loc[i, 'color'] = 'k'
         except ValueError:
-            df_merge.loc[i, 'color'] = 'b'
+            df_merge.loc[i, 'color'] = 'k'
             continue
         # if x > 5:
         #     break
@@ -225,6 +225,10 @@ def plot_results(df):
         df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax, c=df['color'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
+        if 'hp_x' in df.columns:
+            plt.title('HP (high pressure) phases')
+        else:
+            plt.title('HT (high temeperature) phases')
         plt.show()
         # sns.set_style('whitegrid')
         # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
