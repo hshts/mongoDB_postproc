@@ -182,9 +182,18 @@ def group_merge_df():
             elif name == 'Yes':
                 df_groupby_yes = group
         df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
-        # for i, row in df_merge.iterrows():
-        #
+        # x = 0
+        for i, row in df_merge.iterrows():
+            # x += 1
+            try:
+                coeff_lst = get_linear_thermal_expansion(row['composition'])
+                df_merge.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
+            except ValueError as e:
+                print e
+            # if x > 5:
+            #     break
         print df_merge.head(10)
+        print df_merge.describe()
         return df_merge
         # print df_merge.loc[df_merge['composition'].isin(
         #     ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
@@ -223,4 +232,4 @@ def plot_results(df):
 if __name__ == '__main__':
     # add_coordination_tocoll()
     merged_df = group_merge_df()
-    plot_results(merged_df)
+    # plot_results(merged_df)
