@@ -4,6 +4,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from pymatgen import Structure
 from getcoordination import getcoordination
+from matminer.descriptors.composition_features import *
+
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -128,9 +130,10 @@ def add_coordination_tocoll():
     Add a coordination number column to the hp/ht collections
     :return:
     """
-    props = ['hp', 'ht']
+    # props = ['hp', 'ht']
+    props = ['ht']
     for prop in props:
-        for document in db[prop].find().batch_size(75):
+        for document in db[prop].find().batch_size(75).skip(12392):
             for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
                 try:
                     coord_dict = getcoordination(Structure.from_dict(doc['structure']))
@@ -163,11 +166,7 @@ def add_numberdensity_tocoll():
                     print 'Error for key {}!'.format(doc['key'])
 
 
-def plot_results():
-    """
-
-    :return:
-    """
+def group_merge_df():
     pd.set_option('display.width', 1000)
     props = ['hp', 'ht']
     for prop in props:
@@ -183,34 +182,45 @@ def plot_results():
             elif name == 'Yes':
                 df_groupby_yes = group
         df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
+        # for i, row in df_merge.iterrows():
+        #
         print df_merge.head(10)
+        return df_merge
         # print df_merge.loc[df_merge['composition'].isin(
         #     ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
-        plot_props = ['density', 'space_group', 'number_density']
-        for pro in plot_props:
-            fig, ax = plt.subplots()
-            for k, v in df_merge.iterrows():
-                if pro == 'density':
-                    label_cutoff = 0.5
-                # elif pro == 'space_group':
-                else:
-                    label_cutoff = 0.75
-                if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
-                    ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-            df_merge.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax)
-            plt.xlabel(pro + ' of ground states')
-            plt.ylabel(pro + ' of excited states')
-            plt.show()
-            # sns.set_style('whitegrid')
-            # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
-            # plt.show()
-            # sns.violinplot(x='property', y='density', hue=prop, data=df_med, palette='muted', split=True)
-            # plt.show()
-            # tips = sns.load_dataset("tips")
-            # print tips.head()
-            # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
+
+
+def plot_results(df):
+    """
+
+    :return:
+    """
+    plot_props = ['density', 'space_group', 'number_density']
+    for pro in plot_props:
+        fig, ax = plt.subplots()
+        for k, v in df.iterrows():
+            if pro == 'density':
+                label_cutoff = 0.5
+            # elif pro == 'space_group':
+            else:
+                label_cutoff = 0.75
+            if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
+                ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax)
+        plt.xlabel(pro + ' of ground states')
+        plt.ylabel(pro + ' of excited states')
+        plt.show()
+        # sns.set_style('whitegrid')
+        # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
+        # plt.show()
+        # sns.violinplot(x='property', y='density', hue=prop, data=df_med, palette='muted', split=True)
+        # plt.show()
+        # tips = sns.load_dataset("tips")
+        # print tips.head()
+        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
 if __name__ == '__main__':
     # add_coordination_tocoll()
-    plot_results()
+    merged_df = group_merge_df()
+    plot_results(merged_df)
