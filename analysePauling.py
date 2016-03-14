@@ -9,10 +9,10 @@ from matminer.descriptors.composition_features import *
 
 client = pymongo.MongoClient()
 db = client.springer
-coll = db['pauling_file']
 
 
 def insert_states(state, incl_keys, excl_keys):
+    coll = db['pauling_file']
     newcoll = db[state]
     newcoll.drop()
     state_compositions = {}
@@ -74,6 +74,7 @@ def insert_states(state, incl_keys, excl_keys):
 
 
 def insert_statekeys(state):
+    coll = db['pauling_file']
     if state == 'lt':
         newcoll = db['ht_keys']
     else:
@@ -130,8 +131,7 @@ def add_coordination_tocoll():
     Add a coordination number column to the hp/ht collections
     :return:
     """
-    # props = ['hp', 'ht']
-    props = ['ht']
+    props = ['hp', 'ht']
     for prop in props:
         for document in db[prop].find().batch_size(75).skip(12392):
             for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
