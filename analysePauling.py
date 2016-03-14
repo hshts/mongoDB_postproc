@@ -191,8 +191,11 @@ def group_merge_df(prop):
             elif 10 <= np.mean(coeff_lst) < 20:
                 df_merge.loc[i, 'color'] = 'r'
             elif np.mean(coeff_lst) >= 20:
+                df_merge.loc[i, 'color'] = 'g'
+            else:
                 df_merge.loc[i, 'color'] = 'b'
         except ValueError:
+            df_merge.loc[i, 'color'] = 'b'
             continue
         # if x > 5:
         #     break
@@ -219,7 +222,7 @@ def plot_results(df):
                 label_cutoff = 0.75
             if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
                 ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax)
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax, c=df['color'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         plt.show()
@@ -238,4 +241,4 @@ if __name__ == '__main__':
     props = ['hp', 'ht']
     for coll in props:
         merged_df = group_merge_df(coll)
-    # plot_results(merged_df)
+        plot_results(merged_df)
