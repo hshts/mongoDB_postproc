@@ -180,28 +180,28 @@ def group_merge_df(prop):
         elif name == 'Yes':
             df_groupby_yes = group
     df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
-    # x = 0
-    for i, row in df_merge.iterrows():
-        # x += 1
+    return df_merge
+
+
+def add_descriptor_column(df):
+    for i, row in df.iterrows():
         try:
             coeff_lst = get_linear_thermal_expansion(row['composition'])
-            df_merge.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
+            df.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
             if np.mean(coeff_lst) < 20:
-                df_merge.loc[i, 'color'] = 'k'
+                df.loc[i, 'color'] = 'k'
             # elif 10 <= np.mean(coeff_lst) < 20:
             #     df_merge.loc[i, 'color'] = 'r'
             elif np.mean(coeff_lst) >= 20:
-                df_merge.loc[i, 'color'] = 'r'
+                df.loc[i, 'color'] = 'r'
             else:
-                df_merge.loc[i, 'color'] = 'k'
+                df.loc[i, 'color'] = 'k'
         except ValueError:
-            df_merge.loc[i, 'color'] = 'k'
+            df.loc[i, 'color'] = 'k'
             continue
-        # if x > 5:
-        #     break
-    print df_merge.head(10)
-    print df_merge.describe()
-    return df_merge
+    print df.head(5)
+    print df.describe()
+    return df
     # print df_merge.loc[df_merge['composition'].isin(
     #     ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
 
@@ -213,16 +213,17 @@ def plot_results(df):
     """
     plot_props = ['density', 'space_group', 'number_density']
     for pro in plot_props:
-        fig, ax = plt.subplots()
-        for k, v in df.iterrows():
-            if pro == 'density':
-                label_cutoff = 0.5
-            # elif pro == 'space_group':
-            else:
-                label_cutoff = 0.75
-            if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
-                ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax, c=df['color'])
+        # fig, ax = plt.subplots()
+        # for k, v in df.iterrows():
+        #     if pro == 'density':
+        #         label_cutoff = 0.5
+        #     elif pro == 'space_group':
+            # else:
+            #     label_cutoff = 0.75
+            # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
+            #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
+        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax, c=df['color'])
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if 'hp_x' in df.columns:
@@ -245,4 +246,5 @@ if __name__ == '__main__':
     props = ['hp', 'ht']
     for coll in props:
         merged_df = group_merge_df(coll)
-        plot_results(merged_df)
+        df_with_descriptors = add_descriptor_column(merged_df)
+        plot_results(df_with_descriptors)
