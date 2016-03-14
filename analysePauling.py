@@ -186,6 +186,12 @@ def group_merge_df(prop):
         try:
             coeff_lst = get_linear_thermal_expansion(row['composition'])
             df_merge.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
+            if np.mean(coeff_lst) < 10:
+                df_merge.loc[i, 'color'] = 'k'
+            elif 10 <= np.mean(coeff_lst) < 20:
+                df_merge.loc[i, 'color'] = 'r'
+            elif np.mean(coeff_lst) >= 20:
+                df_merge.loc[i, 'color'] = 'b'
         except ValueError:
             continue
         # if x > 5:
