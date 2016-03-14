@@ -183,21 +183,28 @@ def group_merge_df(prop):
     return df_merge
 
 
-def add_descriptor_column(df):
+def add_descriptor_todf(df):
     for i, row in df.iterrows():
         try:
             coeff_lst = get_linear_thermal_expansion(row['composition'])
             df.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
             if np.mean(coeff_lst) < 20:
-                df.loc[i, 'color'] = 'k'
-            # elif 10 <= np.mean(coeff_lst) < 20:
-            #     df_merge.loc[i, 'color'] = 'r'
+                df.loc[i, 'color_thermalcoeff'] = 'k'
             elif np.mean(coeff_lst) >= 20:
-                df.loc[i, 'color'] = 'r'
+                df.loc[i, 'color_thermalcoeff'] = 'r'
             else:
-                df.loc[i, 'color'] = 'k'
+                df.loc[i, 'color_thermalcoeff'] = 'k'
+            rig_mod_lst = get_rigidity_modulus(row['composition'])
+            df.loc[i, 'rigidity_modulus'] = np.mean(rig_mod_lst)
+            if np.mean(rig_mod_lst) < 50:
+                df.loc[i, 'color_rigmod'] = 'k'
+            elif np.mean(rig_mod_lst) >= 50:
+                df.loc[i, 'color_rigmod'] = 'r'
+            else:
+                df.loc[i, 'color_rigmod'] = 'k'
         except ValueError:
-            df.loc[i, 'color'] = 'k'
+            df.loc[i, 'color_thermalcoeff'] = 'k'
+            df.loc[i, 'color_rigmod'] = 'k'
             continue
     print df.head(5)
     print df.describe()
@@ -223,7 +230,8 @@ def plot_results(df):
             # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
             #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
         # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax, c=df['color'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color'])
+        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_thermalcoeff'])
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_rigmod'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if 'hp_x' in df.columns:
@@ -246,5 +254,5 @@ if __name__ == '__main__':
     props = ['hp', 'ht']
     for coll in props:
         merged_df = group_merge_df(coll)
-        df_with_descriptors = add_descriptor_column(merged_df)
+        df_with_descriptors = add_descriptor_todf(merged_df)
         plot_results(df_with_descriptors)
