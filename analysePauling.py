@@ -166,37 +166,35 @@ def add_numberdensity_tocoll():
                     print 'Error for key {}!'.format(doc['key'])
 
 
-def group_merge_df():
+def group_merge_df(prop):
     pd.set_option('display.width', 1000)
-    props = ['hp', 'ht']
-    for prop in props:
-        cursor = db[prop].find()
-        df = pd.DataFrame(list(cursor))
-        df_groupby = df.groupby(['composition', prop], as_index=False).median()
-        df_groupby = df_groupby.groupby(prop, as_index=False)
-        df_groupby_no = pd.DataFrame
-        df_groupby_yes = pd.DataFrame
-        for name, group in df_groupby:
-            if name == 'No':
-                df_groupby_no = group
-            elif name == 'Yes':
-                df_groupby_yes = group
-        df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
-        # x = 0
-        for i, row in df_merge.iterrows():
-            # x += 1
-            try:
-                coeff_lst = get_linear_thermal_expansion(row['composition'])
-                df_merge.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
-            except ValueError as e:
-                print e
-            # if x > 5:
-            #     break
-        print df_merge.head(10)
-        print df_merge.describe()
-        return df_merge
-        # print df_merge.loc[df_merge['composition'].isin(
-        #     ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
+    cursor = db[prop].find()
+    df = pd.DataFrame(list(cursor))
+    df_groupby = df.groupby(['composition', prop], as_index=False).median()
+    df_groupby = df_groupby.groupby(prop, as_index=False)
+    df_groupby_no = pd.DataFrame
+    df_groupby_yes = pd.DataFrame
+    for name, group in df_groupby:
+        if name == 'No':
+            df_groupby_no = group
+        elif name == 'Yes':
+            df_groupby_yes = group
+    df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
+    # x = 0
+    for i, row in df_merge.iterrows():
+        # x += 1
+        try:
+            coeff_lst = get_linear_thermal_expansion(row['composition'])
+            df_merge.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
+        except ValueError:
+            continue
+        # if x > 5:
+        #     break
+    print df_merge.head(10)
+    print df_merge.describe()
+    return df_merge
+    # print df_merge.loc[df_merge['composition'].isin(
+    #     ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
 
 
 def plot_results(df):
@@ -231,5 +229,7 @@ def plot_results(df):
 
 if __name__ == '__main__':
     # add_coordination_tocoll()
-    merged_df = group_merge_df()
+    props = ['hp', 'ht']
+    for coll in props:
+        merged_df = group_merge_df(coll)
     # plot_results(merged_df)
