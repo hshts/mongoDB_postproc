@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 from pymatgen import Structure
 from getcoordination import getcoordination
 from matminer.descriptors.composition_features import *
+from pymatgen.matproj.rest import MPRester
 
 
 client = pymongo.MongoClient()
 db = client.springer
+mpr = MPRester()
 
 
 def insert_states(state, incl_keys, excl_keys):
@@ -202,9 +204,28 @@ def add_descriptor_todf(df):
                 df.loc[i, 'color_rigmod'] = 'r'
             else:
                 df.loc[i, 'color_rigmod'] = 'k'
+            mp_results = mpr.query(row['composition'], ['e_above_hull', 'band_gap'])
+            if len(mp_results) == 0:
+                comp_bandgap = np.nan
+            else:
+                e_above_hull = []
+                band_gap = []
+                for result in mp_results:
+                    e_above_hull.append(result['e_above_hull'])
+                    band_gap.append(result['band_gap'])
+                comp_bandgap = band_gap[e_above_hull.index(min(e_above_hull))]
+            if comp_bandgap == 0:
+                df.loc[i, 'color_class'] = 'b'
+            elif 0 < comp_bandgap <= 3:
+                df.loc[i, 'color_class'] = 'g'
+            elif comp_bandgap > 3:
+                df.loc[i, 'color_class'] = 'r'
+            else:
+                df.loc[i, 'color_class'] = 'k'
         except ValueError:
             df.loc[i, 'color_thermalcoeff'] = 'k'
             df.loc[i, 'color_rigmod'] = 'k'
+            df.loc[i, 'color_class'] = 'k'
             continue
     print df.head(5)
     print df.describe()
@@ -231,7 +252,8 @@ def plot_results(df):
             #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
         # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax, c=df['color'])
         # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_thermalcoeff'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_rigmod'])
+        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_rigmod'])
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_class'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if 'hp_x' in df.columns:
