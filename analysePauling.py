@@ -17,17 +17,19 @@ def insert_states(state, incl_keys, excl_keys):
     coll = db['pauling_file']
     newcoll = db[state]
     newcoll.drop()
-    state_compositions = {}
+    state_keys = []
+    state_compositions = []
     x = 0
     for key in incl_keys:
         x += 1
         if x % 1000 == 0:
             print x
-        for doc in coll.find({'key': key}):
+        for doc in coll.find({'key': key}):  # 1 result
             if 'structure' in doc:
                 comp = Structure.from_dict(doc['structure']).composition.reduced_formula
                 # comp = Composition(doc['metadata']['_Springer']['geninfo']['Standard Formula'])
-                state_compositions[comp] = key
+                state_keys.append(key)
+                state_compositions.append(comp)
     print 'Collecting composition-key pairs for {} state done'.format(state)
     gs_compositions = []
     y = 0
@@ -51,14 +53,14 @@ def insert_states(state, incl_keys, excl_keys):
                 except:
                     print 'GS Density parsing error'
                     density = None
-                newcoll.insert({'key': doc['key'], 'composition': str(comp), state: 'No', 'space_group': space_group,
+                newcoll.insert({'key': doc['key'], 'composition': str(comp), state: False, 'space_group': space_group,
                                 'density': density, 'property': 1})
     print 'GS DONE!'
     print len(gs_compositions)
-    for st_comp in state_compositions:
+    for idx, st_comp in enumerate(state_compositions):
         if st_comp in gs_compositions:
-            common_key = state_compositions[st_comp]
-            for doc in coll.find({'key': common_key}):
+            st_key = state_keys[idx]
+            for doc in coll.find({'key': st_key}):
                 try:
                     space_group = int(doc['metadata']['_Springer']['geninfo']['Space Group'])
                 except:
@@ -69,18 +71,22 @@ def insert_states(state, incl_keys, excl_keys):
                 except:
                     print '{} Density parsing error'.format(state)
                     density = None
-                newcoll.insert(
-                    {'key': doc['key'], 'composition': str(st_comp), state: 'Yes', 'space_group': space_group,
-                     'density': density, 'property': 1})
+                newcoll.update({'key': doc['key']},
+                               {'key': doc['key'], 'composition': str(st_comp), state: True, 'space_group': space_group,
+                                'density': density, 'property': 1}, upsert=True)
+                # newcoll.insert(
+                #     {'key': doc['key'], 'composition': str(st_comp), state: True, 'space_group': space_group,
+                #      'density': density, 'property': 1})
     print '{} DONE!'.format(state)
 
 
 def insert_statekeys(state):
     coll = db['pauling_file']
-    if state == 'lt':
-        newcoll = db['ht_keys']
-    else:
-        newcoll = db[state + '_keys']
+    # if state == 'lt':
+    #     newcoll = db['ht_keys']
+    # else:
+    newcoll = db[state + '_keys']
+    newcoll.drop()
     # for doc in coll.find({'$text': {'$search': 'hp'}}).batch_size(75):
     for doc in coll.find({'metadata._Springer.geninfo.Phase Label(s)': {'$regex': state}}).batch_size(75):
         newcoll.insert({'key': doc['key']})
@@ -94,7 +100,8 @@ def insert_statekeys(state):
             if doc['key'] not in keys_lst:
                 x += 1
                 newcoll.insert({'key': doc['key']})
-    elif state == 'ht' or state == 'lt':
+    elif state == 'ht':
+        # or state == 'lt':
         for doc in coll.find({'metadata._Springer.title': {'$regex': 'T ='}}).batch_size(75):
             if doc['key'] not in keys_lst:
                 y += 1
@@ -123,9 +130,6 @@ def make_state_colls():
                 out_keys += all_keys[other_key]
         print prop, len(in_keys), len(out_keys)
         insert_states(prop, in_keys, out_keys)
-        cursor = db[prop].find()
-        df = pd.DataFrame(list(cursor))
-        print df.head(20)
 
 
 def add_coordination_tocoll():
@@ -161,7 +165,7 @@ def add_numberdensity_tocoll():
             for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
                 try:
                     structure = Structure.from_dict(doc['structure'])
-                    num_density = structure.num_sites/structure.volume
+                    num_density = structure.num_sites / structure.volume
                     db[prop].update({'key': document['key']}, {'$set': {'number_density': num_density}})
                 except Exception as e:
                     print e
@@ -204,6 +208,7 @@ def add_descriptor_todf(df):
                 df.loc[i, 'color_rigmod'] = 'r'
             else:
                 df.loc[i, 'color_rigmod'] = 'k'
+            '''
             mp_results = mpr.query(row['composition'], ['e_above_hull', 'band_gap'])
             if len(mp_results) == 0:
                 comp_bandgap = np.nan
@@ -222,6 +227,7 @@ def add_descriptor_todf(df):
                 df.loc[i, 'color_class'] = 'r'
             else:
                 df.loc[i, 'color_class'] = 'k'
+            '''
         except ValueError:
             df.loc[i, 'color_thermalcoeff'] = 'k'
             df.loc[i, 'color_rigmod'] = 'k'
@@ -229,9 +235,9 @@ def add_descriptor_todf(df):
             continue
     print df.head(5)
     print df.describe()
+    print df.loc[df['composition'].isin(
+        ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
     return df
-    # print df_merge.loc[df_merge['composition'].isin(
-    #     ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
 
 
 def plot_results(df):
@@ -246,14 +252,13 @@ def plot_results(df):
         #     if pro == 'density':
         #         label_cutoff = 0.5
         #     elif pro == 'space_group':
-            # else:
-            #     label_cutoff = 0.75
-            # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
-            #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', ax=ax, c=df['color'])
-        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_thermalcoeff'])
+        # else:
+        #     label_cutoff = 0.75
+        # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
+        #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_thermalcoeff'])
         # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_rigmod'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_class'])
+        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_class'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if 'hp_x' in df.columns:
@@ -271,10 +276,69 @@ def plot_results(df):
         # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
+def detect_hp_ht(doc):
+    coll = db['pauling_file_tags']
+    global x, y
+    try:
+        phaselabel = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+        title = doc['metadata']['_Springer']['title']
+    except KeyError:
+        print 'Key not found'
+        return
+    if 'hp' in phaselabel or 'hp' in title or 'p =' in title:
+        x += 1
+    db['new_hp_keys'].insert({'key': doc['key']})
+    if 'ht' in phaselabel or 'ht' in title or 'T =' in title:
+        y += 1
+
+        # coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+        # else:
+        # coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+
+
+def get_meta_from_structure(structure):
+    comp = structure.composition
+    elsyms = sorted(set([e.symbol for e in comp.elements]))
+    meta = {'nsites': len(structure),
+            'elements': elsyms,
+            'nelements': len(elsyms),
+            'formula': comp.formula,
+            'reduced_cell_formula': comp.reduced_formula,
+            'reduced_cell_formula_abc': Composition(comp.reduced_formula)
+            .alphabetical_formula,
+            'anonymized_formula': comp.anonymized_formula,
+            'chemsystem': '-'.join(elsyms),
+            'is_ordered': structure.is_ordered,
+            'is_valid': structure.is_valid()}
+    return meta
+
+
+def add_metastructuredata():
+    z = 0
+    coll = db['pauling_file_tags']
+    for doc in coll.find().batch_size(75):
+        if z % 1000 == 0:
+            print z
+        if 'structure' in doc:
+            metastrucdata = get_meta_from_structure(Structure.from_dict(doc['structure']))
+            coll.update({'key': doc['key']}, {'$set': {'metadata._structure': metastrucdata}})
+            z += 1
+
+
 if __name__ == '__main__':
-    # add_coordination_tocoll()
     props = ['hp', 'ht']
     for coll in props:
+        # insert_statekeys(coll)
         merged_df = group_merge_df(coll)
         df_with_descriptors = add_descriptor_todf(merged_df)
-        plot_results(df_with_descriptors)
+        # plot_results(df_with_descriptors)
+    # make_state_colls()
+    # add_metastructuredata()
+    '''
+    x = 0
+    y = 0
+    coll = db['pauling_file_tags']
+    for document in coll.find().batch_size(75):
+        detect_hp_ht(document)
+    print x, y
+    '''
