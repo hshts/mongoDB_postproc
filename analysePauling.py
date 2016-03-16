@@ -257,9 +257,6 @@ def plot_results(df):
         # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
         #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
         df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
-        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_thermalcoeff'])
-        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_rigmod'])
-        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_class'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if 'hp_x' in df.columns:
@@ -307,57 +304,70 @@ def add_metastructuredata():
 
 
 def detect_hp_ht(doc):
-    phase_labels = set()
-    title_labels = set()
+    coll = db['pauling_file_tags']
     try:
         phaselabel = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-        title = doc['metadata']['_Springer']['title']
+        titlelabel = doc['metadata']['_Springer']['title']
     except KeyError as e:
         print e, 'Key not found'
         return
-    print doc['key']
-    if ' hp' in phaselabel:
-        phase_labels.add('hp')
-    if ' hp' in title:
-        title_labels.add('hp')
-    if ' ht' in phaselabel:
-        phase_labels.add('ht')
-    if 'ht' in title:
-        title_labels.add('ht')
-    if ' rt' in phaselabel:
-        phase_labels.add('rt')
-    if ' rt' in title:
-        title_labels.add('rt')
-    if 'p =' in title:
-        title_labels.add('hp')
-        # print re.findall(r'p\s*=\s*(.*)\s*GPa', title)
-    if 'T =' in title:
-        temp_k = float(re.findall(r'T\s*=\s*(.*)\s*K', title)[0])
-        if temp_k > 400:
-            print temp_k
-            title_labels.add('ht')
-        elif temp_k <= 400:
-            print temp_k
-            title_labels.add('rt')
-    if len(list(phase_labels)) == 0:
-        phase_labels.add(None)
-    if len(list(title_labels)) == 0:
-        title_labels.add(None)
-    print phase_labels
-    print title_labels
-    combinations = list(itertools.product(list(phase_labels), list(title_labels)))
-    if len(combinations) == 0:
-        print None
+    # print doc['key']
+    if ' hp' in titlelabel:
+        hp_titlelabel = 'hp'
+    elif 'p =' in titlelabel:
+        hp_titlelabel = 'p ='
     else:
-        for x in combinations:
-            print x
-    # for i in list(phase_labels):
-    #     for j in list(title_labels):
-    #         print  set()
-    print '----------------'
-    # coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
-    # else:
-    # coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+        hp_titlelabel = None
+    hp_phaselabel = 'hp' if ' hp' in phaselabel else None
+    if {hp_titlelabel, hp_phaselabel} == {'hp', None}:
+        # print None
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': None}})
+    elif hp_titlelabel == 'hp' and hp_phaselabel == 'hp':
+        # print 'HP'
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    elif hp_titlelabel == 'p =':
+        # print 'HP'
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    else:
+        # print 'AP'
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+    ht_titlelabel = ''
+    if ' ht' in titlelabel or 'T =' in titlelabel:
+        if 'T =' in titlelabel:
+            try:
+                temp_k = float(re.findall(r'T\s*=\s*(.*)\s*K', titlelabel)[0])
+                if temp_k > 400:
+                    # print temp_k
+                    ht_titlelabel = 'T ='
+                elif temp_k <= 400:
+                    # print temp_k
+                    ht_titlelabel = 'rt'
+            except:
+                ht_titlelabel = 'rt'
+    else:
+        ht_titlelabel = None
+    if ' ht' in phaselabel:
+        ht_phaselabel = 'ht'
+    elif ' rt' in phaselabel:
+        ht_phaselabel = 'rt'
+    else:
+        ht_phaselabel = None
+    if {ht_phaselabel, ht_titlelabel} == {'ht', 'rt'} or {ht_phaselabel, ht_titlelabel} == {'ht', None}:
+        # print None
+        coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+    elif ht_titlelabel == 'T =' and ht_phaselabel == 'rt':
+        # print None
+        coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+    elif ht_titlelabel == 'T =':
+        # print 'HT'
+        coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+    elif hp_titlelabel == 'ht' and ht_phaselabel == 'ht':
+        # print 'HT'
+        coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+    else:
+        # print 'RT'
+        coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+    # print '----------------'
 
 
 if __name__ == '__main__':
@@ -372,11 +382,13 @@ if __name__ == '__main__':
     '''
     # make_state_colls()
     # add_metastructuredata()
-    x = 0
-    y = 0
     coll = db['pauling_file_tags']
-    for document in coll.find({'key': {
-        '$in': ['sd_1250760', 'sd_0541206', 'sd_2040724', 'sd_1610906', 'sd_1502611', 'sd_1252608', 'sd_1701652',
-                'sd_1310301', 'sd_0533656']}}).batch_size(75):
+    # for document in coll.find({'key': {
+    #     '$in': ['sd_1250760', 'sd_0541206', 'sd_2040724', 'sd_1610906', 'sd_1502611', 'sd_1252608', 'sd_1701652',
+    #             'sd_1310301', 'sd_0533656']}}).batch_size(75):
+    x = 0
+    for document in coll.find().batch_size(75):
+        x += 1
+        if x % 1000 == 0:
+            print x
         detect_hp_ht(document)
-    print x, y
