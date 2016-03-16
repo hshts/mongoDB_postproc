@@ -1,5 +1,6 @@
 import unittest
 import pymongo
+import re
 
 
 client = pymongo.MongoClient()
@@ -85,11 +86,103 @@ def detect_hp_ht(doc):
 
 
 class Testtags(unittest.TestCase):
+    # PbTe
     def test1(self):
         for doc in coll.find({'key': 'sd_0456664'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    def test2(self):
+        for doc in coll.find({'key': 'sd_1610906'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+
+    def test3(self):
+        for doc in coll.find({'key': 'sd_1610909'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+
+    def test4(self):
+        for doc in coll.find({'key': 'sd_0456666'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    def test5(self):
+        for doc in coll.find({'key': 'sd_0529813'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+
+    def test6(self):
+        for doc in coll.find({'key': 'sd_0533656'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+
+    def test7(self):
+        for doc in coll.find({'key': 'sd_0456647'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    # ZrO2
+    def test8(self):
+        for doc in coll.find({'key': 'sd_1252340'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+
+    def test9(self):
+        for doc in coll.find({'key': 'sd_1250760'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    def test10(self):
+        for doc in coll.find({'key': 'sd_1626333'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+
+    def test11(self):
+        for doc in coll.find({'key': 'sd_1211700'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+
+    def test12(self):
+        for doc in coll.find({'key': 'sd_0541122'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+
+    def test13(self):
+        for doc in coll.find({'key': 'sd_0453509'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+
+    def test14(self):
+        for doc in coll.find({'key': 'sd_1521666'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': True})
+
+    def test15(self):
+        for doc in coll.find({'key': 'sd_0560825'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+
+    # Ag
+    def test16(self):
+        for doc in coll.find({'key': 'sd_0552728'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+
+    def test17(self):
+        for doc in coll.find({'key': 'sd_1822505'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    ###
+    def test18(self):
+        for doc in coll.find({'key': 'sd_1212949'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    def test19(self):
+        for doc in coll.find({'key': 'sd_0455995'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    # Ca
+    def test20(self):
+        for doc in coll.find({'key': 'sd_1925112'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+
+    def test21(self):
+        for doc in coll.find({'key': 'sd_1400924'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+
+    def test22(self):
+        for doc in coll.find({'key': 'sd_1928058'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    def test23(self):
+        for doc in coll.find({'key': 'sd_1932324'}):
             self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
 
 
 if __name__ == '__main__':
     unittest.main()
-
