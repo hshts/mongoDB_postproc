@@ -293,7 +293,7 @@ def get_meta_from_structure(structure):
 
 def add_metastructuredata():
     z = 0
-    coll = db['pauling_file_tags']
+    coll = db['pauling_file']
     for doc in coll.find().batch_size(75):
         if z % 1000 == 0:
             print z
@@ -369,7 +369,19 @@ def detect_hp_ht(doc):
     else:
         # print 'RT'
         coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
-    # print '----------------'
+        # print '----------------'
+
+
+def set_hpht_dataset_tags():
+    tagcoll = db['pauling_file_tags']
+    unique_comps = tagcoll.distinct('metadata._structure.reduced_cell_formula')
+    for comp in unique_comps:
+        if tagcoll.find({'metadata._structure.reduced_cell_formula': comp, 'is_hp': True}).count() > 0 and tagcoll.find(
+                {'metadata._structure.reduced_cell_formula': comp, 'is_hp': False}).count() > 0:
+            tagcoll.update({'metadata._structure.reduced_cell_formula': comp}, {'$set': {'is_hp_dataset': True}})
+        if tagcoll.find({'metadata._structure.reduced_cell_formula': comp, 'is_ht': True}).count() > 0 and tagcoll.find(
+                {'metadata._structure.reduced_cell_formula': comp, 'is_ht': False}).count() > 0:
+            tagcoll.update({'metadata._structure.reduced_cell_formula': comp}, {'$set': {'is_ht_dataset': True}})
 
 
 if __name__ == '__main__':
@@ -383,14 +395,16 @@ if __name__ == '__main__':
         plot_results(merged_df)
     '''
     # make_state_colls()
-    # add_metastructuredata()
-    coll = db['pauling_file_tags']
+    add_metastructuredata()
+    # coll = db['pauling_file_tags']
     # for document in coll.find({'key': {
     #     '$in': ['sd_1250760', 'sd_0541206', 'sd_2040724', 'sd_1610906', 'sd_1502611', 'sd_1252608', 'sd_1701652',
     #             'sd_1310301', 'sd_0533656']}}).batch_size(75):
+    '''
     x = 0
     for document in coll.find().batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
         detect_hp_ht(document)
+    '''
