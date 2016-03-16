@@ -6,7 +6,7 @@ from pymatgen import Structure
 from getcoordination import getcoordination
 from matminer.descriptors.composition_features import *
 from pymatgen.matproj.rest import MPRester
-
+import itertools
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -181,9 +181,9 @@ def group_merge_df(prop):
     df_groupby_no = pd.DataFrame
     df_groupby_yes = pd.DataFrame
     for name, group in df_groupby:
-        if name == 'No':
+        if not name:
             df_groupby_no = group
-        elif name == 'Yes':
+        elif name:
             df_groupby_yes = group
     df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
     return df_merge
@@ -256,7 +256,8 @@ def plot_results(df):
         #     label_cutoff = 0.75
         # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
         #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_thermalcoeff'])
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
+        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_thermalcoeff'])
         # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_rigmod'])
         # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['color_class'])
         plt.xlabel(pro + ' of ground states')
@@ -276,26 +277,6 @@ def plot_results(df):
         # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
-def detect_hp_ht(doc):
-    coll = db['pauling_file_tags']
-    global x, y
-    try:
-        phaselabel = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-        title = doc['metadata']['_Springer']['title']
-    except KeyError:
-        print 'Key not found'
-        return
-    if 'hp' in phaselabel or 'hp' in title or 'p =' in title:
-        x += 1
-    db['new_hp_keys'].insert({'key': doc['key']})
-    if 'ht' in phaselabel or 'ht' in title or 'T =' in title:
-        y += 1
-
-        # coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
-        # else:
-        # coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-
-
 def get_meta_from_structure(structure):
     comp = structure.composition
     elsyms = sorted(set([e.symbol for e in comp.elements]))
@@ -305,7 +286,7 @@ def get_meta_from_structure(structure):
             'formula': comp.formula,
             'reduced_cell_formula': comp.reduced_formula,
             'reduced_cell_formula_abc': Composition(comp.reduced_formula)
-            .alphabetical_formula,
+                .alphabetical_formula,
             'anonymized_formula': comp.anonymized_formula,
             'chemsystem': '-'.join(elsyms),
             'is_ordered': structure.is_ordered,
@@ -325,20 +306,77 @@ def add_metastructuredata():
             z += 1
 
 
+def detect_hp_ht(doc):
+    phase_labels = set()
+    title_labels = set()
+    try:
+        phaselabel = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+        title = doc['metadata']['_Springer']['title']
+    except KeyError as e:
+        print e, 'Key not found'
+        return
+    print doc['key']
+    if ' hp' in phaselabel:
+        phase_labels.add('hp')
+    if ' hp' in title:
+        title_labels.add('hp')
+    if ' ht' in phaselabel:
+        phase_labels.add('ht')
+    if 'ht' in title:
+        title_labels.add('ht')
+    if ' rt' in phaselabel:
+        phase_labels.add('rt')
+    if ' rt' in title:
+        title_labels.add('rt')
+    if 'p =' in title:
+        title_labels.add('hp')
+        # print re.findall(r'p\s*=\s*(.*)\s*GPa', title)
+    if 'T =' in title:
+        temp_k = float(re.findall(r'T\s*=\s*(.*)\s*K', title)[0])
+        if temp_k > 400:
+            print temp_k
+            title_labels.add('ht')
+        elif temp_k <= 400:
+            print temp_k
+            title_labels.add('rt')
+    if len(list(phase_labels)) == 0:
+        phase_labels.add(None)
+    if len(list(title_labels)) == 0:
+        title_labels.add(None)
+    print phase_labels
+    print title_labels
+    combinations = list(itertools.product(list(phase_labels), list(title_labels)))
+    if len(combinations) == 0:
+        print None
+    else:
+        for x in combinations:
+            print x
+    # for i in list(phase_labels):
+    #     for j in list(title_labels):
+    #         print  set()
+    print '----------------'
+    # coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    # else:
+    # coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+
+
 if __name__ == '__main__':
+    '''
     props = ['hp', 'ht']
+    add_numberdensity_tocoll()
     for coll in props:
         # insert_statekeys(coll)
         merged_df = group_merge_df(coll)
-        df_with_descriptors = add_descriptor_todf(merged_df)
-        # plot_results(df_with_descriptors)
+        # df_with_descriptors = add_descriptor_todf(merged_df)
+        plot_results(merged_df)
+    '''
     # make_state_colls()
     # add_metastructuredata()
-    '''
     x = 0
     y = 0
     coll = db['pauling_file_tags']
-    for document in coll.find().batch_size(75):
+    for document in coll.find({'key': {
+        '$in': ['sd_1250760', 'sd_0541206', 'sd_2040724', 'sd_1610906', 'sd_1502611', 'sd_1252608', 'sd_1701652',
+                'sd_1310301', 'sd_0533656']}}).batch_size(75):
         detect_hp_ht(document)
     print x, y
-    '''
