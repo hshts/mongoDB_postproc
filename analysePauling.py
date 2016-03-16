@@ -344,6 +344,8 @@ def detect_hp_ht(doc):
                     ht_titlelabel = 'rt'
             except:
                 ht_titlelabel = 'rt'
+        else:
+            ht_titlelabel = 'ht'
     else:
         ht_titlelabel = None
     if ' ht' in phaselabel:
