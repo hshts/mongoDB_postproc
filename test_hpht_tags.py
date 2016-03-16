@@ -136,6 +136,14 @@ class Testtags(unittest.TestCase):
         for doc in coll.find({'key': 'sd_0541122'}):
             self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
 
+    def test121(self):
+        for doc in coll.find({'key': 'sd_0541206'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+
+    def test122(self):
+        for doc in coll.find({'key': 'sd_2040724'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+
     def test13(self):
         for doc in coll.find({'key': 'sd_0453509'}):
             self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
@@ -181,6 +189,23 @@ class Testtags(unittest.TestCase):
 
     def test23(self):
         for doc in coll.find({'key': 'sd_1932324'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    ###
+    def test24(self):
+        for doc in coll.find({'key': 'sd_1502611'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    def test25(self):
+        for doc in coll.find({'key': 'sd_1252608'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+
+    def test26(self):
+        for doc in coll.find({'key': 'sd_1701652'}):
+            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
+
+    def test27(self):
+        for doc in coll.find({'key': 'sd_1310301'}):
             self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
 
 

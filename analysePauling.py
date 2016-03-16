@@ -311,7 +311,6 @@ def detect_hp_ht(doc):
     except KeyError as e:
         print e, 'Key not found'
         return
-    # print doc['key']
     if ' hp' in titlelabel:
         hp_titlelabel = 'hp'
     elif 'p =' in titlelabel:
@@ -395,16 +394,11 @@ if __name__ == '__main__':
         plot_results(merged_df)
     '''
     # make_state_colls()
-    add_metastructuredata()
-    # coll = db['pauling_file_tags']
-    # for document in coll.find({'key': {
-    #     '$in': ['sd_1250760', 'sd_0541206', 'sd_2040724', 'sd_1610906', 'sd_1502611', 'sd_1252608', 'sd_1701652',
-    #             'sd_1310301', 'sd_0533656']}}).batch_size(75):
-    '''
+    # add_metastructuredata()
+    coll = db['pauling_file_tags']
     x = 0
     for document in coll.find().batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
         detect_hp_ht(document)
-    '''
