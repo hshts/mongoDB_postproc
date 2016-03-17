@@ -362,7 +362,7 @@ def detect_hp_ht(doc):
     elif ht_titlelabel == 'T =':
         # print 'HT'
         coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
-    elif hp_titlelabel == 'ht' and ht_phaselabel == 'ht':
+    elif ht_titlelabel == 'ht' and ht_phaselabel == 'ht':
         # print 'HT'
         coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
     else:

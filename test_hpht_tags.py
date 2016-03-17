@@ -170,9 +170,9 @@ class Testtags(unittest.TestCase):
         for doc in coll.find({'key': 'sd_1212949'}):
             self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
 
-    def test19(self):
-        for doc in coll.find({'key': 'sd_0455995'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+    # def test19(self):
+    #     for doc in coll.find({'key': 'sd_0455995'}):
+    #         self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
 
     # Ca
     def test20(self):
