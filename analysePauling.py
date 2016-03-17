@@ -234,7 +234,7 @@ def add_descriptor_todf(df):
     return df
 
 
-def plot_results(df, propname):
+def plot_xy(df, propname):
     """
 
     :return:
@@ -258,14 +258,18 @@ def plot_results(df, propname):
         elif propname == 'ht':
             plt.title('HT (high temeperature) phases')
         plt.show()
-        # sns.set_style('whitegrid')
-        # sns.violinplot(x='property', y='space_group', hue=prop, data=df_med, palette='muted', split=True)
-        # plt.show()
-        # sns.violinplot(x='property', y='density', hue=prop, data=df_med, palette='muted', split=True)
-        # plt.show()
-        # tips = sns.load_dataset("tips")
-        # print tips.head()
-        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
+        sns.set_style('whitegrid')
+
+
+def plot_violin(df, propname):
+    plot_props = ['density', 'space_group', 'number_density']
+    for pro in plot_props:
+        sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
+                       split=True)
+        plt.show()
+    # tips = sns.load_dataset("tips")
+    # print tips.head()
+    # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
 def get_meta_from_structure(structure):
@@ -364,7 +368,9 @@ def set_hpht_dataset_tags():
     comps_ids = defaultdict(list)
     x = 0
     for doc in tagcoll.find({'structure': {'$exists': True}}, {'key': 1, 'is_hp': 1, 'is_ht': 1,
-                                 'metadata._structure.reduced_cell_formula': 1}).batch_size(75):
+                                                               'metadata._structure.reduced_cell_formula':
+                                                                   1}).batch_size(
+        75):
         x += 1
         if x % 1000 == 0:
             print x
@@ -411,18 +417,16 @@ def tags_group_merge_df(prop):
         num_density = structure.num_sites / structure.volume
         df.set_value(i, 'number_density', num_density)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
-    df_groupby = df_groupby.groupby('is_' + prop, as_index=False)
+    df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
     df_groupby_false = pd.DataFrame
     df_groupby_true = pd.DataFrame
-    for name, group in df_groupby:
+    for name, group in df_2nd_groupby:
         if not name:
             df_groupby_false = group
         elif name:
             df_groupby_true = group
     df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
-    print df_merge.head(10)
-    print df_merge.describe()
-    return df_merge
+    return (df_groupby, df_merge)
 
 
 if __name__ == '__main__':
@@ -450,5 +454,6 @@ if __name__ == '__main__':
     # set_hpht_dataset_tags()
     props = ['hp', 'ht']
     for name in props:
-        grouped_df = tags_group_merge_df(name)
-        plot_results(grouped_df, name)
+        grouped_df, merged_df = tags_group_merge_df(name)
+        plot_violin(grouped_df, name)
+        plot_xy(merged_df, name)
