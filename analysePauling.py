@@ -306,69 +306,63 @@ def add_metastructuredata():
 def detect_hp_ht(doc):
     coll = db['pauling_file_tags']
     try:
-        phaselabel = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-        titlelabel = doc['metadata']['_Springer']['title']
+        phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+        title = doc['metadata']['_Springer']['title']
     except KeyError as e:
         print e, 'Key not found'
         return
-    if ' hp' in titlelabel:
-        hp_titlelabel = 'hp'
-    elif 'p =' in titlelabel:
-        hp_titlelabel = 'p ='
+    hp_title = None
+    hp_phase = None
+    if 'p =' in title or ' hp' in title:
+        hp_title = True
     else:
-        hp_titlelabel = None
-    hp_phaselabel = 'hp' if ' hp' in phaselabel else None
-    if {hp_titlelabel, hp_phaselabel} == {'hp', None}:
-        # print None
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': None}})
-    elif hp_titlelabel == 'hp' and hp_phaselabel == 'hp':
-        # print 'HP'
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
-    elif hp_titlelabel == 'p =':
-        # print 'HP'
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+        hp_title = None
+    if ' hp' in phase:
+        hp_phase = True
     else:
-        # print 'AP'
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-    ht_titlelabel = ''
-    if ' ht' in titlelabel or 'T =' in titlelabel:
-        if 'T =' in titlelabel:
-            try:
-                temp_k = float(re.findall(r'T\s*=\s*(.*)\s*K', titlelabel)[0])
-                if temp_k > 400:
-                    # print temp_k
-                    ht_titlelabel = 'T ='
-                elif temp_k <= 400:
-                    # print temp_k
-                    ht_titlelabel = 'rt'
-            except:
-                ht_titlelabel = 'rt'
+        hp_phase = None
+    if hp_title == hp_phase:
+        if hp_title is not None:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': hp_title}})
         else:
-            ht_titlelabel = 'ht'
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
     else:
-        ht_titlelabel = None
-    if ' ht' in phaselabel:
-        ht_phaselabel = 'ht'
-    elif ' rt' in phaselabel:
-        ht_phaselabel = 'rt'
-    else:
-        ht_phaselabel = None
-    if {ht_phaselabel, ht_titlelabel} == {'ht', 'rt'} or {ht_phaselabel, ht_titlelabel} == {'ht', None}:
-        # print None
-        coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-    elif ht_titlelabel == 'T =' and ht_phaselabel == 'rt':
-        # print None
-        coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-    elif ht_titlelabel == 'T =':
-        # print 'HT'
         coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
-    elif ht_titlelabel == 'ht' and ht_phaselabel == 'ht':
-        # print 'HT'
-        coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+    ht_title = None
+    ht_phase = None
+    if 'T =' in title:
+        try:
+            temp_k = float(re.findall(r'T\s*=\s*(.*)\s*K', title)[0])
+            if temp_k > 400:
+                ht_title = True
+            elif temp_k <= 400:
+                ht_title = False
+        except:
+            ht_title = None
+    elif ' ht' in title:
+        ht_title = True
+    elif ' rt' in title:
+        ht_title = False
     else:
-        # print 'RT'
-        coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
-        # print '----------------'
+        ht_title = None
+    if ' ht' in phase:
+        ht_phase = True
+    elif ' rt' in phase:
+        ht_phase = False
+    else:
+        ht_phase = None
+    if ht_title == ht_phase:
+        if ht_title is not None:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_title}})
+        else:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+    elif ht_title is not None and ht_phase is not None:
+        coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+    else:
+        if ht_title is not None:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_title}})
+        else:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_phase}})
 
 
 def set_hpht_dataset_tags():
