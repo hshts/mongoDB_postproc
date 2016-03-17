@@ -241,12 +241,12 @@ def add_descriptor_todf(df):
     return df
 
 
-def plot_results(df):
+def plot_results(df, propname):
     """
 
     :return:
     """
-    plot_props = ['density', 'space_group', 'number_density']
+    plot_props = ['density', 'space_group']
     for pro in plot_props:
         # fig, ax = plt.subplots()
         # for k, v in df.iterrows():
@@ -260,9 +260,9 @@ def plot_results(df):
         df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
-        if 'hp_x' in df.columns:
+        if propname == 'hp':
             plt.title('HP (high pressure) phases')
-        else:
+        elif propname == 'ht':
             plt.title('HT (high temeperature) phases')
         plt.show()
         # sns.set_style('whitegrid')
@@ -426,6 +426,7 @@ def tags_group_merge_df(prop):
     df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
     print df_merge.head(10)
     print df_merge.describe()
+    return df_merge
 
 
 if __name__ == '__main__':
@@ -453,4 +454,5 @@ if __name__ == '__main__':
     # set_hpht_dataset_tags()
     props = ['hp', 'ht']
     for name in props:
-        tags_group_merge_df(name)
+        grouped_df = tags_group_merge_df(name)
+        plot_results(grouped_df, name)
