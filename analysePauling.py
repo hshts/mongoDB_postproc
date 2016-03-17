@@ -7,6 +7,7 @@ from getcoordination import getcoordination
 from matminer.descriptors.composition_features import *
 from pymatgen.matproj.rest import MPRester
 import itertools
+from collections import defaultdict
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -363,14 +364,39 @@ def detect_hp_ht(doc):
 
 def set_hpht_dataset_tags():
     tagcoll = db['pauling_file_tags']
-    unique_comps = tagcoll.distinct('metadata._structure.reduced_cell_formula')
-    for comp in unique_comps:
-        if tagcoll.find({'metadata._structure.reduced_cell_formula': comp, 'is_hp': True}).count() > 0 and tagcoll.find(
-                {'metadata._structure.reduced_cell_formula': comp, 'is_hp': False}).count() > 0:
-            tagcoll.update({'metadata._structure.reduced_cell_formula': comp}, {'$set': {'is_hp_dataset': True}})
-        if tagcoll.find({'metadata._structure.reduced_cell_formula': comp, 'is_ht': True}).count() > 0 and tagcoll.find(
-                {'metadata._structure.reduced_cell_formula': comp, 'is_ht': False}).count() > 0:
-            tagcoll.update({'metadata._structure.reduced_cell_formula': comp}, {'$set': {'is_ht_dataset': True}})
+    comps_hp_true = set()
+    comps_hp_false = set()
+    comps_ht_true = set()
+    comps_ht_false = set()
+    comps_ids = defaultdict(list)
+    x = 0
+    for doc in tagcoll.find({'structure': {'$exists': True}}, {'key': 1, 'is_hp': 1, 'is_ht': 1,
+                                 'metadata._structure.reduced_cell_formula': 1}).batch_size(75):
+        x += 1
+        if x % 1000 == 0:
+            print x
+        composition = doc['metadata']['_structure']['reduced_cell_formula']
+        if doc['is_hp'] is True:
+            comps_hp_true.add(composition)
+        elif doc['is_hp'] is False:
+            comps_hp_false.add(composition)
+        if doc['is_ht'] is True:
+            comps_ht_true.add(composition)
+        elif doc['is_ht'] is False:
+            comps_ht_false.add(composition)
+        comps_ids[composition].append(doc['key'])
+    hp_unique_comps = comps_hp_true.intersection(comps_hp_false)
+    print len(hp_unique_comps)
+    for comp in hp_unique_comps:
+        ids_toset = comps_ids[comp]
+        for id in ids_toset:
+            tagcoll.update({'key': id}, {'$set': {'is_hp_dataset': True}})
+    ht_unique_comps = comps_ht_true.intersection(comps_ht_false)
+    print len(ht_unique_comps)
+    for comp in ht_unique_comps:
+        ids_toset = comps_ids[comp]
+        for id in ids_toset:
+            tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
 
 
 if __name__ == '__main__':
@@ -384,7 +410,8 @@ if __name__ == '__main__':
         plot_results(merged_df)
     '''
     # make_state_colls()
-    # add_metastructuredata()
+    # set_hpht_dataset_tags()
+    '''
     coll = db['pauling_file_tags']
     x = 0
     for document in coll.find().batch_size(75):
@@ -393,3 +420,5 @@ if __name__ == '__main__':
             print x
         if 'structure' in document:
             detect_hp_ht(document)
+    '''
+    set_hpht_dataset_tags()
