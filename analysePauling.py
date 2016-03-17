@@ -151,26 +151,19 @@ def add_coordination_tocoll():
                     print 'Error for key {}!'.format(doc['key'])
 
 
-def add_numberdensity_tocoll():
+def add_numberdensity_tocoll(prop):
     """
     Add a number density column to the hp/ht collections
     :return:
     """
-    props = ['hp', 'ht']
-    for prop in props:
-        x = 0
-        for document in db[prop].find().batch_size(75):
-            x += 1
-            if x % 1000 == 0:
-                print x
-            for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
-                try:
-                    structure = Structure.from_dict(doc['structure'])
-                    num_density = structure.num_sites / structure.volume
-                    db[prop].update({'key': document['key']}, {'$set': {'number_density': num_density}})
-                except Exception as e:
-                    print e
-                    print 'Error for key {}!'.format(doc['key'])
+    for doc in db['pauling_file_tags_' + prop].find().batch_size(75):
+        try:
+            structure = Structure.from_dict(doc['structure'])
+            num_density = structure.num_sites / structure.volume
+            db['pauling_file_tags_' + prop].update({'key': doc['key']}, {'$set': {'number_density': num_density}})
+        except Exception as e:
+            print e
+            print 'Error for key {}!'.format(doc['key'])
 
 
 def group_merge_df(prop):
@@ -246,7 +239,7 @@ def plot_results(df, propname):
 
     :return:
     """
-    plot_props = ['density', 'space_group']
+    plot_props = ['density', 'space_group', 'number_density']
     for pro in plot_props:
         # fig, ax = plt.subplots()
         # for k, v in df.iterrows():
@@ -414,6 +407,9 @@ def tags_group_merge_df(prop):
             df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
         except IndexError as e:
             df.set_value(i, 'density', None)
+        structure = Structure.from_dict(row['structure'])
+        num_density = structure.num_sites / structure.volume
+        df.set_value(i, 'number_density', num_density)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_groupby = df_groupby.groupby('is_' + prop, as_index=False)
     df_groupby_false = pd.DataFrame
