@@ -305,12 +305,8 @@ def add_metastructuredata():
 
 def detect_hp_ht(doc):
     coll = db['pauling_file_tags']
-    try:
-        phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-        title = doc['metadata']['_Springer']['title']
-    except KeyError as e:
-        print e, 'Key not found'
-        return
+    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+    title = doc['metadata']['_Springer']['title']
     hp_title = None
     hp_phase = None
     if 'p =' in title or ' hp' in title:
