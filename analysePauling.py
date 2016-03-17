@@ -399,6 +399,35 @@ def set_hpht_dataset_tags():
             tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
 
 
+def tags_group_merge_df(prop):
+    pd.set_option('display.width', 1000)
+    coll = db['pauling_file_tags_' + prop]
+    cursor = coll.find()
+    df = pd.DataFrame(list(cursor))
+    for i, row in df.iterrows():
+        df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
+        try:
+            df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
+        except:
+            df.set_value(i, 'space_group', None)
+        try:
+            df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
+        except IndexError as e:
+            df.set_value(i, 'density', None)
+    df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
+    df_groupby = df_groupby.groupby('is_' + prop, as_index=False)
+    df_groupby_false = pd.DataFrame
+    df_groupby_true = pd.DataFrame
+    for name, group in df_groupby:
+        if not name:
+            df_groupby_false = group
+        elif name:
+            df_groupby_true = group
+    df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
+    print df_merge.head(10)
+    print df_merge.describe()
+
+
 if __name__ == '__main__':
     '''
     props = ['hp', 'ht']
@@ -421,4 +450,7 @@ if __name__ == '__main__':
         if 'structure' in document:
             detect_hp_ht(document)
     '''
-    set_hpht_dataset_tags()
+    # set_hpht_dataset_tags()
+    props = ['hp', 'ht']
+    for name in props:
+        tags_group_merge_df(name)
