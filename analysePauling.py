@@ -323,11 +323,11 @@ def detect_hp_ht(doc):
         hp_phase = None
     if hp_title == hp_phase:
         if hp_title is not None:
-            coll.update({'key': doc['key']}, {'$set': {'is_ht': hp_title}})
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
         else:
-            coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     else:
-        coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
     ht_title = None
     ht_phase = None
     if 'T =' in title:
@@ -395,4 +395,5 @@ if __name__ == '__main__':
         x += 1
         if x % 1000 == 0:
             print x
-        detect_hp_ht(document)
+        if 'structure' in document:
+            detect_hp_ht(document)
