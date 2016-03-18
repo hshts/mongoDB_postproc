@@ -434,16 +434,19 @@ def save_ddf_pkl(df, name):
 
 
 def analyze_df(df_pkl):
-    df = pd.read_pickle(df_pkl)
-    print df.describe()
+    if df_pkl == 'ht.pkl':
+        df = pd.read_pickle(df_pkl)
+        for i, row in df.iterrows():
+            df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
+        print df.sort('sg_diff').dropna().tail(20)
 
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
     props = ['hp', 'ht']
     for name in props:
-        grouped_df, merged_df = tags_group_merge_df(name)
-        save_ddf_pkl(merged_df, name)
+        # grouped_df, merged_df = tags_group_merge_df(name)
+        # save_ddf_pkl(merged_df, name)
         analyze_df(name + '.pkl')
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
