@@ -267,9 +267,9 @@ def plot_violin(df, propname):
         sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
                        split=True)
         plt.show()
-    # tips = sns.load_dataset("tips")
-    # print tips.head()
-    # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
+        # tips = sns.load_dataset("tips")
+        # print tips.head()
+        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
 def get_meta_from_structure(structure):
@@ -429,16 +429,23 @@ def tags_group_merge_df(prop):
     return df_groupby, df_merge
 
 
-def save_ddf_pkl(df, name):
-    df.to_pickle(name + '.pkl')
+def save_ddf_pkl(df, prop):
+    df.to_pickle(prop + '.pkl')
 
 
-def analyze_df(df_pkl):
-    if df_pkl == 'ht.pkl':
-        df = pd.read_pickle(df_pkl)
+def get_compd_class(prop, reduced_formula):
+    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
+    return df.loc[df['reduced_cell_formula'] == reduced_formula]['metadata'].iloc[0]['_Springer']['geninfo'][
+        'Compound Class(es)']
+
+
+def analyze_df(prop):
+    if prop == 'ht':
+        df = pd.read_pickle(prop + '.pkl')
         for i, row in df.iterrows():
             df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
-        print df.sort('sg_diff').dropna().tail(20)
+            df.set_value(i, 'compound_class', get_compd_class(prop, row['reduced_cell_formula']))
+        print df.sort_values('sg_diff').dropna().tail(40)
 
 
 if __name__ == '__main__':
@@ -446,7 +453,6 @@ if __name__ == '__main__':
     props = ['hp', 'ht']
     for name in props:
         # grouped_df, merged_df = tags_group_merge_df(name)
-        # save_ddf_pkl(merged_df, name)
-        analyze_df(name + '.pkl')
+        analyze_df(name)
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
