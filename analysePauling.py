@@ -399,23 +399,23 @@ def set_hpht_dataset_tags():
 
 
 def tags_group_merge_df(prop):
-    pd.set_option('display.width', 1000)
     coll = db['pauling_file_tags_' + prop]
     cursor = coll.find()
     df = pd.DataFrame(list(cursor))
     for i, row in df.iterrows():
-        df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
-        try:
-            df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
-        except:
-            df.set_value(i, 'space_group', None)
-        try:
-            df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
-        except IndexError as e:
-            df.set_value(i, 'density', None)
-        structure = Structure.from_dict(row['structure'])
-        num_density = structure.num_sites / structure.volume
-        df.set_value(i, 'number_density', num_density)
+        if row['metadata']['_structure']['is_valid']:
+            df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
+            try:
+                df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
+            except:
+                df.set_value(i, 'space_group', None)
+            try:
+                df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
+            except IndexError as e:
+                df.set_value(i, 'density', None)
+            structure = Structure.from_dict(row['structure'])
+            num_density = structure.num_sites / structure.volume
+            df.set_value(i, 'number_density', num_density)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
     df_groupby_false = pd.DataFrame
@@ -426,34 +426,24 @@ def tags_group_merge_df(prop):
         elif name:
             df_groupby_true = group
     df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
-    return (df_groupby, df_merge)
+    return df_groupby, df_merge
+
+
+def save_ddf_pkl(df, name):
+    df.to_pickle(name + '.pkl')
+
+
+def analyze_df(df_pkl):
+    df = pd.read_pickle(df_pkl)
+    print df.describe()
 
 
 if __name__ == '__main__':
-    '''
-    props = ['hp', 'ht']
-    add_numberdensity_tocoll()
-    for coll in props:
-        # insert_statekeys(coll)
-        merged_df = group_merge_df(coll)
-        # df_with_descriptors = add_descriptor_todf(merged_df)
-        plot_results(merged_df)
-    '''
-    # make_state_colls()
-    # set_hpht_dataset_tags()
-    '''
-    coll = db['pauling_file_tags']
-    x = 0
-    for document in coll.find().batch_size(75):
-        x += 1
-        if x % 1000 == 0:
-            print x
-        if 'structure' in document:
-            detect_hp_ht(document)
-    '''
-    # set_hpht_dataset_tags()
+    pd.set_option('display.width', 1000)
     props = ['hp', 'ht']
     for name in props:
         grouped_df, merged_df = tags_group_merge_df(name)
-        plot_violin(grouped_df, name)
-        plot_xy(merged_df, name)
+        save_ddf_pkl(merged_df, name)
+        analyze_df(name + '.pkl')
+        # plot_violin(grouped_df, name)
+        # plot_xy(merged_df, name)
