@@ -466,5 +466,5 @@ if __name__ == '__main__':
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
         # analyze_df(name)
-        df_withdesc = add_descriptor_todf(name, 'electronegativity')plot
+        df_withdesc = add_descriptor_todf(name, 'electronegativity')
         plot_xy(df_withdesc, name)
