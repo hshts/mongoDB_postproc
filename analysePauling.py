@@ -183,8 +183,24 @@ def group_merge_df(prop):
     return df_merge
 
 
-def add_descriptor_todf(df):
+def add_descriptor_todf(propname, desc_name):
+    df = pd.read_pickle(propname + '.pkl')
     for i, row in df.iterrows():
+        if desc_name == 'electronegativity':
+            try:
+                electronegativity_list = get_pauling_elect(row['reduced_cell_formula'])
+                electronegativity_std = get_std(electronegativity_list)
+                df.loc[i, 'eleneg_std'] = electronegativity_std
+                if electronegativity_std < 5:
+                    df.loc[i, 'col_eleneg_std'] = 'b'
+                elif 5 <= electronegativity_std <= 10:
+                    df.loc[i, 'col_eleneg_std'] = 'g'
+                else:
+                    df.loc[i, 'col_eleneg_std'] = 'r'
+            except ValueError:
+                df.loc[i, 'col_eleneg_std'] = 'k'
+                continue
+        '''
         try:
             coeff_lst = get_linear_thermal_expansion(row['composition'])
             df.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
@@ -202,7 +218,6 @@ def add_descriptor_todf(df):
                 df.loc[i, 'color_rigmod'] = 'r'
             else:
                 df.loc[i, 'color_rigmod'] = 'k'
-            '''
             mp_results = mpr.query(row['composition'], ['e_above_hull', 'band_gap'])
             if len(mp_results) == 0:
                 comp_bandgap = np.nan
@@ -221,16 +236,12 @@ def add_descriptor_todf(df):
                 df.loc[i, 'color_class'] = 'r'
             else:
                 df.loc[i, 'color_class'] = 'k'
-            '''
         except ValueError:
             df.loc[i, 'color_thermalcoeff'] = 'k'
             df.loc[i, 'color_rigmod'] = 'k'
             df.loc[i, 'color_class'] = 'k'
             continue
-    print df.head(5)
-    print df.describe()
-    print df.loc[df['composition'].isin(
-        ['Th', 'Cm', 'Cf', 'Cs', 'Li', 'GaTe', 'TmTe', 'Li2S', 'HoSn3', 'ZnF2', 'ZrO2'])]
+        '''
     return df
 
 
@@ -250,7 +261,7 @@ def plot_xy(df, propname):
         #     label_cutoff = 0.75
         # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
         #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['col_eleneg_std'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if propname == 'hp':
@@ -440,19 +451,20 @@ def get_compd_class(prop, reduced_formula):
 
 
 def analyze_df(prop):
-    if prop == 'ht':
-        df = pd.read_pickle(prop + '.pkl')
-        for i, row in df.iterrows():
-            df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
-            df.set_value(i, 'compound_class', get_compd_class(prop, row['reduced_cell_formula']))
-        print df.sort_values('sg_diff').dropna().tail(40)
+    df = pd.read_pickle(prop + '.pkl')
+    for i, row in df.iterrows():
+        df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
+        # df.set_value(i, 'compound_class', get_compd_class(prop, row['reduced_cell_formula']))
+    print df.sort_values('sg_diff').dropna().tail(40)
 
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    props = ['hp', 'ht']
+    props = ['ht']
     for name in props:
         # grouped_df, merged_df = tags_group_merge_df(name)
-        analyze_df(name)
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
+        # analyze_df(name)
+        df_withdesc = add_descriptor_todf(name, 'electronegativity')plot
+        plot_xy(df_withdesc, name)
