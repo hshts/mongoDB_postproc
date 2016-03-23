@@ -183,6 +183,44 @@ def group_merge_df(prop):
     return df_merge
 
 
+class AddDescriptor:
+    def __init__(self, propname):
+        self.df = pd.read_pickle(propname + '.pkl')
+
+    def electronegativity(self):
+        for i, row in self.df.iterrows():
+            try:
+                electronegativity_list = get_pauling_elect(row['reduced_cell_formula'])
+                electronegativity_std = get_std(electronegativity_list)
+                self.df.loc[i, 'eleneg_std'] = electronegativity_std
+                if electronegativity_std < 0.70:
+                    self.df.loc[i, 'col_eleneg_std'] = 'b'
+                elif 0.70 <= electronegativity_std <= 1.40:
+                    self.df.loc[i, 'col_eleneg_std'] = 'g'
+                else:
+                    self.df.loc[i, 'col_eleneg_std'] = 'r'
+            except ValueError:
+                self.df.loc[i, 'col_eleneg_std'] = 'k'
+                continue
+        return self.df
+
+    def thermal_exp(self):
+        for i, row in self.df.iterrows():
+            try:
+                coeff_lst = get_linear_thermal_expansion(row['composition'])
+                self.df.loc[i, 'linear_thermal_exp_coeff'] = get_std(coeff_lst)
+                if np.mean(coeff_lst) < 20:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
+                elif np.mean(coeff_lst) >= 20:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'r'
+                else:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
+            except ValueError:
+                self.df.loc[i, 'col_eleneg_std'] = 'k'
+                continue
+        return self.df
+
+
 def add_descriptor_todf(propname, desc_name):
     df = pd.read_pickle(propname + '.pkl')
     for i, row in df.iterrows():
@@ -202,14 +240,6 @@ def add_descriptor_todf(propname, desc_name):
                 continue
         '''
         try:
-            coeff_lst = get_linear_thermal_expansion(row['composition'])
-            df.loc[i, 'linear_thermal_exp_coeff'] = np.mean(coeff_lst)
-            if np.mean(coeff_lst) < 20:
-                df.loc[i, 'color_thermalcoeff'] = 'k'
-            elif np.mean(coeff_lst) >= 20:
-                df.loc[i, 'color_thermalcoeff'] = 'r'
-            else:
-                df.loc[i, 'color_thermalcoeff'] = 'k'
             rig_mod_lst = get_rigidity_modulus(row['composition'])
             df.loc[i, 'rigidity_modulus'] = np.mean(rig_mod_lst)
             if np.mean(rig_mod_lst) < 50:
