@@ -151,21 +151,6 @@ def add_coordination_tocoll():
                     print 'Error for key {}!'.format(doc['key'])
 
 
-def add_numberdensity_tocoll(prop):
-    """
-    Add a number density column to the hp/ht collections
-    :return:
-    """
-    for doc in db['pauling_file_tags_' + prop].find().batch_size(75):
-        try:
-            structure = Structure.from_dict(doc['structure'])
-            num_density = structure.num_sites / structure.volume
-            db['pauling_file_tags_' + prop].update({'key': doc['key']}, {'$set': {'number_density': num_density}})
-        except Exception as e:
-            print e
-            print 'Error for key {}!'.format(doc['key'])
-
-
 def group_merge_df(prop):
     pd.set_option('display.width', 1000)
     cursor = db[prop].find()
@@ -208,7 +193,8 @@ class AddDescriptor:
         for i, row in self.df.iterrows():
             try:
                 coeff_lst = get_linear_thermal_expansion(row['composition'])
-                self.df.loc[i, 'linear_thermal_exp_coeff'] = get_std(coeff_lst)
+                coeff_std = get_std(coeff_lst)
+                self.df.loc[i, 'linear_thermal_exp_coeff'] = coeff_std
                 if np.mean(coeff_lst) < 20:
                     self.df.loc[i, 'color_thermalcoeff'] = 'k'
                 elif np.mean(coeff_lst) >= 20:
@@ -487,16 +473,18 @@ def analyze_df(prop):
         # df.set_value(i, 'compound_class', get_compd_class(prop, row['reduced_cell_formula']))
     print df.sort_values('sg_diff').dropna().tail(60)
     print df.loc[(60 < df['space_group_x']) & (df['space_group_x'] < 65)]
+    print df.sort_values('number_density_y').dropna().tail(60)
 
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
     props = ['ht']
     for name in props:
-        # grouped_df, merged_df = tags_group_merge_df(name)
-        # plot_violin(grouped_df, name)
-        # plot_xy(merged_df, name)
+        grouped_df, merged_df = tags_group_merge_df(name)
+        plot_violin(grouped_df, name)
+        plot_xy(merged_df, name)
         # analyze_df(name)
-        df_withdesc = add_descriptor_todf(name, 'electronegativity')
-        # print df_withdesc.describe()
-        plot_xy(df_withdesc, name)
+        # df_withdesc = add_descriptor_todf(name, 'electronegativity')
+        # withdesc = getattr(AddDescriptor(name), 'electronegativity')
+        # print withdesc()
+        # plot_xy(df_withdesc, name)
