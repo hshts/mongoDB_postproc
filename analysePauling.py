@@ -191,9 +191,9 @@ def add_descriptor_todf(propname, desc_name):
                 electronegativity_list = get_pauling_elect(row['reduced_cell_formula'])
                 electronegativity_std = get_std(electronegativity_list)
                 df.loc[i, 'eleneg_std'] = electronegativity_std
-                if electronegativity_std < 5:
+                if electronegativity_std < 0.70:
                     df.loc[i, 'col_eleneg_std'] = 'b'
-                elif 5 <= electronegativity_std <= 10:
+                elif 0.70 <= electronegativity_std <= 1.40:
                     df.loc[i, 'col_eleneg_std'] = 'g'
                 else:
                     df.loc[i, 'col_eleneg_std'] = 'r'
@@ -455,7 +455,8 @@ def analyze_df(prop):
     for i, row in df.iterrows():
         df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
         # df.set_value(i, 'compound_class', get_compd_class(prop, row['reduced_cell_formula']))
-    print df.sort_values('sg_diff').dropna().tail(40)
+    print df.sort_values('sg_diff').dropna().tail(60)
+    print df.loc[(60 < df['space_group_x']) & (df['space_group_x'] < 65)]
 
 
 if __name__ == '__main__':
@@ -467,4 +468,5 @@ if __name__ == '__main__':
         # plot_xy(merged_df, name)
         # analyze_df(name)
         df_withdesc = add_descriptor_todf(name, 'electronegativity')
+        # print df_withdesc.describe()
         plot_xy(df_withdesc, name)
