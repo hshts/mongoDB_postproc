@@ -261,6 +261,17 @@ def add_descriptor_todf(propname, desc_name):
     return df
 
 
+def plot_violin(df, propname):
+    plot_props = ['density', 'space_group', 'number_density']
+    for pro in plot_props:
+        sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
+                       split=True)
+        plt.show()
+        # tips = sns.load_dataset("tips")
+        # print tips.head()
+        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
+
+
 def plot_xy(df, propname):
     """
 
@@ -277,7 +288,8 @@ def plot_xy(df, propname):
         #     label_cutoff = 0.75
         # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
         #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['col_eleneg_std'])
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
+        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['col_eleneg_std'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if propname == 'hp':
@@ -286,17 +298,6 @@ def plot_xy(df, propname):
             plt.title('HT (high temeperature) phases')
         plt.show()
         sns.set_style('whitegrid')
-
-
-def plot_violin(df, propname):
-    plot_props = ['density', 'space_group', 'number_density']
-    for pro in plot_props:
-        sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
-                       split=True)
-        plt.show()
-        # tips = sns.load_dataset("tips")
-        # print tips.head()
-        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
 def get_meta_from_structure(structure):
@@ -425,10 +426,17 @@ def set_hpht_dataset_tags():
             tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
 
 
+def get_compd_class(prop, reduced_formula):
+    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
+    return df.loc[df['reduced_cell_formula'] == reduced_formula]['metadata'].iloc[0]['_Springer']['geninfo'][
+        'Compound Class(es)']
+
+
 def tags_group_merge_df(prop):
-    coll = db['pauling_file_tags_' + prop]
-    cursor = coll.find()
-    df = pd.DataFrame(list(cursor))
+    # coll = db['pauling_file_tags_' + prop]
+    # cursor = coll.find()
+    # df = pd.DataFrame(list(cursor))
+    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
     for i, row in df.iterrows():
         if row['metadata']['_structure']['is_valid']:
             df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
@@ -441,7 +449,9 @@ def tags_group_merge_df(prop):
             except IndexError as e:
                 df.set_value(i, 'density', None)
             structure = Structure.from_dict(row['structure'])
-            num_density = structure.num_sites / structure.volume
+            composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
+            # num_density = structure.num_sites / structure.volume
+            num_density = len(composition.get_el_amt_dict())/structure.volume
             df.set_value(i, 'number_density', num_density)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
@@ -460,12 +470,6 @@ def save_ddf_pkl(df, prop):
     df.to_pickle(prop + '.pkl')
 
 
-def get_compd_class(prop, reduced_formula):
-    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
-    return df.loc[df['reduced_cell_formula'] == reduced_formula]['metadata'].iloc[0]['_Springer']['geninfo'][
-        'Compound Class(es)']
-
-
 def analyze_df(prop):
     df = pd.read_pickle(prop + '.pkl')
     for i, row in df.iterrows():
@@ -478,7 +482,7 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    props = ['ht']
+    props = ['hp', 'ht']
     for name in props:
         grouped_df, merged_df = tags_group_merge_df(name)
         plot_violin(grouped_df, name)
