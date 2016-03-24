@@ -288,8 +288,8 @@ def plot_xy(df, propname):
         #     label_cutoff = 0.75
         # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
         #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
-        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['col_eleneg_std'])
+        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['col_eleneg_std'])
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if propname == 'hp':
@@ -482,13 +482,14 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    props = ['hp', 'ht']
+    props = ['ht']
     for name in props:
-        grouped_df, merged_df = tags_group_merge_df(name)
-        plot_violin(grouped_df, name)
-        plot_xy(merged_df, name)
+        # grouped_df, merged_df = tags_group_merge_df(name)
+        # save_ddf_pkl(merged_df, name)
+        # plot_violin(grouped_df, name)
+        # plot_xy(merged_df, name)
         # analyze_df(name)
-        # df_withdesc = add_descriptor_todf(name, 'electronegativity')
+        df_withdesc = add_descriptor_todf(name, 'electronegativity')
         # withdesc = getattr(AddDescriptor(name), 'electronegativity')
         # print withdesc()
-        # plot_xy(df_withdesc, name)
+        plot_xy(df_withdesc, name)
