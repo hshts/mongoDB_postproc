@@ -348,7 +348,7 @@ class AddDescriptor:
     def __init__(self, propname):
         self.df = pd.read_pickle(propname + '.pkl')
 
-    def electronegativity(self):
+    def X(self):
         for i, row in self.df.iterrows():
             try:
                 electronegativity_std = get_std(get_pymatgen_eldata_lst(row['reduced_cell_formula'], 'X'))
@@ -390,5 +390,5 @@ if __name__ == '__main__':
         # plot_xy(merged_df, name)
         # merged_df.to_pickle(name + '.pkl')
         # analyze_df(name)
-        df_withdesc = getattr(AddDescriptor(name), 'electronegativity')()
+        df_withdesc = getattr(AddDescriptor(name), 'thermal_exp')()
         plot_xy(df_withdesc, name)
