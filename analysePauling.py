@@ -133,173 +133,6 @@ def make_state_colls():
         insert_states(prop, in_keys, out_keys)
 
 
-def add_coordination_tocoll():
-    """
-    Add a coordination number column to the hp/ht collections
-    :return:
-    """
-    props = ['hp', 'ht']
-    for prop in props:
-        for document in db[prop].find().batch_size(75).skip(12392):
-            for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
-                try:
-                    coord_dict = getcoordination(Structure.from_dict(doc['structure']))
-                    print coord_dict
-                    db[prop].update({'key': document['key']}, {'$set': {'max_coordination': max(coord_dict.values())}})
-                except Exception as e:
-                    print e
-                    print 'Error for key {}!'.format(doc['key'])
-
-
-def group_merge_df(prop):
-    pd.set_option('display.width', 1000)
-    cursor = db[prop].find()
-    df = pd.DataFrame(list(cursor))
-    df_groupby = df.groupby(['composition', prop], as_index=False).median()
-    df_groupby = df_groupby.groupby(prop, as_index=False)
-    df_groupby_no = pd.DataFrame
-    df_groupby_yes = pd.DataFrame
-    for name, group in df_groupby:
-        if not name:
-            df_groupby_no = group
-        elif name:
-            df_groupby_yes = group
-    df_merge = pd.merge(df_groupby_no, df_groupby_yes, on='composition')
-    return df_merge
-
-
-class AddDescriptor:
-    def __init__(self, propname):
-        self.df = pd.read_pickle(propname + '.pkl')
-
-    def electronegativity(self):
-        for i, row in self.df.iterrows():
-            try:
-                electronegativity_list = get_pauling_elect(row['reduced_cell_formula'])
-                electronegativity_std = get_std(electronegativity_list)
-                self.df.loc[i, 'eleneg_std'] = electronegativity_std
-                if electronegativity_std < 0.70:
-                    self.df.loc[i, 'col_eleneg_std'] = 'b'
-                elif 0.70 <= electronegativity_std <= 1.40:
-                    self.df.loc[i, 'col_eleneg_std'] = 'g'
-                else:
-                    self.df.loc[i, 'col_eleneg_std'] = 'r'
-            except ValueError:
-                self.df.loc[i, 'col_eleneg_std'] = 'k'
-                continue
-        return self.df
-
-    def thermal_exp(self):
-        for i, row in self.df.iterrows():
-            try:
-                coeff_lst = get_linear_thermal_expansion(row['composition'])
-                coeff_std = get_std(coeff_lst)
-                self.df.loc[i, 'linear_thermal_exp_coeff'] = coeff_std
-                if np.mean(coeff_lst) < 20:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
-                elif np.mean(coeff_lst) >= 20:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'r'
-                else:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
-            except ValueError:
-                self.df.loc[i, 'col_eleneg_std'] = 'k'
-                continue
-        return self.df
-
-
-def add_descriptor_todf(propname, desc_name):
-    df = pd.read_pickle(propname + '.pkl')
-    for i, row in df.iterrows():
-        if desc_name == 'electronegativity':
-            try:
-                electronegativity_list = get_pauling_elect(row['reduced_cell_formula'])
-                electronegativity_std = get_std(electronegativity_list)
-                df.loc[i, 'eleneg_std'] = electronegativity_std
-                if electronegativity_std < 0.70:
-                    df.loc[i, 'col_eleneg_std'] = 'b'
-                elif 0.70 <= electronegativity_std <= 1.40:
-                    df.loc[i, 'col_eleneg_std'] = 'g'
-                else:
-                    df.loc[i, 'col_eleneg_std'] = 'r'
-            except ValueError:
-                df.loc[i, 'col_eleneg_std'] = 'k'
-                continue
-        '''
-        try:
-            rig_mod_lst = get_rigidity_modulus(row['composition'])
-            df.loc[i, 'rigidity_modulus'] = np.mean(rig_mod_lst)
-            if np.mean(rig_mod_lst) < 50:
-                df.loc[i, 'color_rigmod'] = 'k'
-            elif np.mean(rig_mod_lst) >= 50:
-                df.loc[i, 'color_rigmod'] = 'r'
-            else:
-                df.loc[i, 'color_rigmod'] = 'k'
-            mp_results = mpr.query(row['composition'], ['e_above_hull', 'band_gap'])
-            if len(mp_results) == 0:
-                comp_bandgap = np.nan
-            else:
-                e_above_hull = []
-                band_gap = []
-                for result in mp_results:
-                    e_above_hull.append(result['e_above_hull'])
-                    band_gap.append(result['band_gap'])
-                comp_bandgap = band_gap[e_above_hull.index(min(e_above_hull))]
-            if comp_bandgap == 0:
-                df.loc[i, 'color_class'] = 'b'
-            elif 0 < comp_bandgap <= 3:
-                df.loc[i, 'color_class'] = 'g'
-            elif comp_bandgap > 3:
-                df.loc[i, 'color_class'] = 'r'
-            else:
-                df.loc[i, 'color_class'] = 'k'
-        except ValueError:
-            df.loc[i, 'color_thermalcoeff'] = 'k'
-            df.loc[i, 'color_rigmod'] = 'k'
-            df.loc[i, 'color_class'] = 'k'
-            continue
-        '''
-    return df
-
-
-def plot_violin(df, propname):
-    plot_props = ['density', 'space_group', 'number_density']
-    for pro in plot_props:
-        sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
-                       split=True)
-        plt.show()
-        # tips = sns.load_dataset("tips")
-        # print tips.head()
-        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
-
-
-def plot_xy(df, propname):
-    """
-
-    :return:
-    """
-    plot_props = ['density', 'space_group', 'number_density']
-    for pro in plot_props:
-        # fig, ax = plt.subplots()
-        # for k, v in df.iterrows():
-        #     if pro == 'density':
-        #         label_cutoff = 0.5
-        #     elif pro == 'space_group':
-        # else:
-        #     label_cutoff = 0.75
-        # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
-        #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['col_eleneg_std'])
-        plt.xlabel(pro + ' of ground states')
-        plt.ylabel(pro + ' of excited states')
-        if propname == 'hp':
-            plt.title('HP (high pressure) phases')
-        elif propname == 'ht':
-            plt.title('HT (high temeperature) phases')
-        plt.show()
-        sns.set_style('whitegrid')
-
-
 def get_meta_from_structure(structure):
     comp = structure.composition
     elsyms = sorted(set([e.symbol for e in comp.elements]))
@@ -432,6 +265,156 @@ def get_compd_class(prop, reduced_formula):
         'Compound Class(es)']
 
 
+def add_coordination_tocoll():
+    """
+    Add a coordination number column to the hp/ht collections
+    :return:
+    """
+    props = ['hp', 'ht']
+    for prop in props:
+        for document in db[prop].find().batch_size(75).skip(12392):
+            for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
+                try:
+                    coord_dict = getcoordination(Structure.from_dict(doc['structure']))
+                    print coord_dict
+                    db[prop].update({'key': document['key']}, {'$set': {'max_coordination': max(coord_dict.values())}})
+                except Exception as e:
+                    print e
+                    print 'Error for key {}!'.format(doc['key'])
+
+
+class AddDescriptor:
+    def __init__(self, propname):
+        self.df = pd.read_pickle(propname + '.pkl')
+
+    def electronegativity(self):
+        for i, row in self.df.iterrows():
+            try:
+                electronegativity_list = get_pymatgen_eldata_lst(row['reduced_cell_formula'], 'X')
+                electronegativity_std = get_std(electronegativity_list)
+                self.df.loc[i, 'eleneg_std'] = electronegativity_std
+                if electronegativity_std < 0.70:
+                    self.df.loc[i, 'col_eleneg_std'] = 'b'
+                elif 0.70 <= electronegativity_std <= 1.40:
+                    self.df.loc[i, 'col_eleneg_std'] = 'g'
+                else:
+                    self.df.loc[i, 'col_eleneg_std'] = 'r'
+            except ValueError:
+                self.df.loc[i, 'col_eleneg_std'] = 'k'
+                continue
+        return self.df
+
+    def thermal_exp(self):
+        for i, row in self.df.iterrows():
+            try:
+                coeff_lst = get_linear_thermal_expansion(row['composition'])
+                coeff_std = get_std(coeff_lst)
+                self.df.loc[i, 'linear_thermal_exp_coeff'] = coeff_std
+                if np.mean(coeff_lst) < 20:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
+                elif np.mean(coeff_lst) >= 20:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'r'
+                else:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
+            except ValueError:
+                self.df.loc[i, 'col_eleneg_std'] = 'k'
+                continue
+        return self.df
+
+
+def add_descriptor_todf(propname, desc_name):
+    df = pd.read_pickle(propname + '.pkl')
+    for i, row in df.iterrows():
+        if desc_name == 'electronegativity':
+            try:
+                electronegativity_list = get_pymatgen_eldata_lst(row['reduced_cell_formula'], 'X')
+                electronegativity_std = get_std(electronegativity_list)
+                df.loc[i, 'eleneg_std'] = electronegativity_std
+                if electronegativity_std < 0.70:
+                    df.loc[i, 'col_eleneg_std'] = 'b'
+                elif 0.70 <= electronegativity_std <= 1.40:
+                    df.loc[i, 'col_eleneg_std'] = 'g'
+                else:
+                    df.loc[i, 'col_eleneg_std'] = 'r'
+            except ValueError:
+                df.loc[i, 'col_eleneg_std'] = 'k'
+                continue
+        '''
+        try:
+            rig_mod_lst = get_rigidity_modulus(row['composition'])
+            df.loc[i, 'rigidity_modulus'] = np.mean(rig_mod_lst)
+            if np.mean(rig_mod_lst) < 50:
+                df.loc[i, 'color_rigmod'] = 'k'
+            elif np.mean(rig_mod_lst) >= 50:
+                df.loc[i, 'color_rigmod'] = 'r'
+            else:
+                df.loc[i, 'color_rigmod'] = 'k'
+            mp_results = mpr.query(row['composition'], ['e_above_hull', 'band_gap'])
+            if len(mp_results) == 0:
+                comp_bandgap = np.nan
+            else:
+                e_above_hull = []
+                band_gap = []
+                for result in mp_results:
+                    e_above_hull.append(result['e_above_hull'])
+                    band_gap.append(result['band_gap'])
+                comp_bandgap = band_gap[e_above_hull.index(min(e_above_hull))]
+            if comp_bandgap == 0:
+                df.loc[i, 'color_class'] = 'b'
+            elif 0 < comp_bandgap <= 3:
+                df.loc[i, 'color_class'] = 'g'
+            elif comp_bandgap > 3:
+                df.loc[i, 'color_class'] = 'r'
+            else:
+                df.loc[i, 'color_class'] = 'k'
+        except ValueError:
+            df.loc[i, 'color_thermalcoeff'] = 'k'
+            df.loc[i, 'color_rigmod'] = 'k'
+            df.loc[i, 'color_class'] = 'k'
+            continue
+        '''
+    return df
+
+
+def plot_violin(df, propname):
+    plot_props = ['density', 'space_group', 'number_density']
+    for pro in plot_props:
+        sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
+                       split=True)
+        plt.show()
+        # tips = sns.load_dataset("tips")
+        # print tips.head()
+        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
+
+
+def plot_xy(df, propname):
+    """
+
+    :return:
+    """
+    plot_props = ['density', 'space_group', 'number_density']
+    for pro in plot_props:
+        # fig, ax = plt.subplots()
+        # for k, v in df.iterrows():
+        #     if pro == 'density':
+        #         label_cutoff = 0.5
+        #     elif pro == 'space_group':
+        # else:
+        #     label_cutoff = 0.75
+        # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
+        #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
+        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
+        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['col_eleneg_std'])
+        plt.xlabel(pro + ' of ground states')
+        plt.ylabel(pro + ' of excited states')
+        if propname == 'hp':
+            plt.title('HP (high pressure) phases')
+        elif propname == 'ht':
+            plt.title('HT (high temeperature) phases')
+        plt.show()
+        sns.set_style('whitegrid')
+
+
 def tags_group_merge_df(prop):
     # coll = db['pauling_file_tags_' + prop]
     # cursor = coll.find()
@@ -464,10 +447,6 @@ def tags_group_merge_df(prop):
             df_groupby_true = group
     df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
     return df_groupby, df_merge
-
-
-def save_ddf_pkl(df, prop):
-    df.to_pickle(prop + '.pkl')
 
 
 def analyze_df(prop):
