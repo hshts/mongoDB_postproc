@@ -9,6 +9,7 @@ from pymatgen.matproj.rest import MPRester
 import itertools
 from collections import defaultdict
 
+
 client = pymongo.MongoClient()
 db = client.springer
 mpr = MPRester()
@@ -265,115 +266,34 @@ def get_compd_class(prop, reduced_formula):
         'Compound Class(es)']
 
 
-def add_coordination_tocoll():
-    """
-    Add a coordination number column to the hp/ht collections
-    :return:
-    """
-    props = ['hp', 'ht']
-    for prop in props:
-        for document in db[prop].find().batch_size(75).skip(12392):
-            for doc in db['pauling_file'].find({'key': document['key']}):  # Should be just 1 loop for 1 result
-                try:
-                    coord_dict = getcoordination(Structure.from_dict(doc['structure']))
-                    print coord_dict
-                    db[prop].update({'key': document['key']}, {'$set': {'max_coordination': max(coord_dict.values())}})
-                except Exception as e:
-                    print e
-                    print 'Error for key {}!'.format(doc['key'])
-
-
-class AddDescriptor:
-    def __init__(self, propname):
-        self.df = pd.read_pickle(propname + '.pkl')
-
-    def electronegativity(self):
-        for i, row in self.df.iterrows():
-            try:
-                electronegativity_list = get_pymatgen_eldata_lst(row['reduced_cell_formula'], 'X')
-                electronegativity_std = get_std(electronegativity_list)
-                self.df.loc[i, 'eleneg_std'] = electronegativity_std
-                if electronegativity_std < 0.70:
-                    self.df.loc[i, 'col_eleneg_std'] = 'b'
-                elif 0.70 <= electronegativity_std <= 1.40:
-                    self.df.loc[i, 'col_eleneg_std'] = 'g'
-                else:
-                    self.df.loc[i, 'col_eleneg_std'] = 'r'
-            except ValueError:
-                self.df.loc[i, 'col_eleneg_std'] = 'k'
-                continue
-        return self.df
-
-    def thermal_exp(self):
-        for i, row in self.df.iterrows():
-            try:
-                coeff_lst = get_linear_thermal_expansion(row['composition'])
-                coeff_std = get_std(coeff_lst)
-                self.df.loc[i, 'linear_thermal_exp_coeff'] = coeff_std
-                if np.mean(coeff_lst) < 20:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
-                elif np.mean(coeff_lst) >= 20:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'r'
-                else:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
-            except ValueError:
-                self.df.loc[i, 'col_eleneg_std'] = 'k'
-                continue
-        return self.df
-
-
-def add_descriptor_todf(propname, desc_name):
-    df = pd.read_pickle(propname + '.pkl')
+def tags_group_merge_df(prop):
+    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
     for i, row in df.iterrows():
-        if desc_name == 'electronegativity':
+        if row['metadata']['_structure']['is_valid']:
+            df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
             try:
-                electronegativity_list = get_pymatgen_eldata_lst(row['reduced_cell_formula'], 'X')
-                electronegativity_std = get_std(electronegativity_list)
-                df.loc[i, 'eleneg_std'] = electronegativity_std
-                if electronegativity_std < 0.70:
-                    df.loc[i, 'col_eleneg_std'] = 'b'
-                elif 0.70 <= electronegativity_std <= 1.40:
-                    df.loc[i, 'col_eleneg_std'] = 'g'
-                else:
-                    df.loc[i, 'col_eleneg_std'] = 'r'
-            except ValueError:
-                df.loc[i, 'col_eleneg_std'] = 'k'
-                continue
-        '''
-        try:
-            rig_mod_lst = get_rigidity_modulus(row['composition'])
-            df.loc[i, 'rigidity_modulus'] = np.mean(rig_mod_lst)
-            if np.mean(rig_mod_lst) < 50:
-                df.loc[i, 'color_rigmod'] = 'k'
-            elif np.mean(rig_mod_lst) >= 50:
-                df.loc[i, 'color_rigmod'] = 'r'
-            else:
-                df.loc[i, 'color_rigmod'] = 'k'
-            mp_results = mpr.query(row['composition'], ['e_above_hull', 'band_gap'])
-            if len(mp_results) == 0:
-                comp_bandgap = np.nan
-            else:
-                e_above_hull = []
-                band_gap = []
-                for result in mp_results:
-                    e_above_hull.append(result['e_above_hull'])
-                    band_gap.append(result['band_gap'])
-                comp_bandgap = band_gap[e_above_hull.index(min(e_above_hull))]
-            if comp_bandgap == 0:
-                df.loc[i, 'color_class'] = 'b'
-            elif 0 < comp_bandgap <= 3:
-                df.loc[i, 'color_class'] = 'g'
-            elif comp_bandgap > 3:
-                df.loc[i, 'color_class'] = 'r'
-            else:
-                df.loc[i, 'color_class'] = 'k'
-        except ValueError:
-            df.loc[i, 'color_thermalcoeff'] = 'k'
-            df.loc[i, 'color_rigmod'] = 'k'
-            df.loc[i, 'color_class'] = 'k'
-            continue
-        '''
-    return df
+                df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
+            except:
+                df.set_value(i, 'space_group', None)
+            try:
+                df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
+            except IndexError as e:
+                df.set_value(i, 'density', None)
+            structure = Structure.from_dict(row['structure'])
+            composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
+            num_density = len(composition.get_el_amt_dict())/structure.volume
+            df.set_value(i, 'number_density', num_density)
+    df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
+    df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
+    df_groupby_false = pd.DataFrame
+    df_groupby_true = pd.DataFrame
+    for name, group in df_2nd_groupby:
+        if not name:
+            df_groupby_false = group
+        elif name:
+            df_groupby_true = group
+    df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
+    return df_groupby, df_merge
 
 
 def plot_violin(df, propname):
@@ -415,48 +335,50 @@ def plot_xy(df, propname):
         sns.set_style('whitegrid')
 
 
-def tags_group_merge_df(prop):
-    # coll = db['pauling_file_tags_' + prop]
-    # cursor = coll.find()
-    # df = pd.DataFrame(list(cursor))
-    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
-    for i, row in df.iterrows():
-        if row['metadata']['_structure']['is_valid']:
-            df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
-            try:
-                df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
-            except:
-                df.set_value(i, 'space_group', None)
-            try:
-                df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
-            except IndexError as e:
-                df.set_value(i, 'density', None)
-            structure = Structure.from_dict(row['structure'])
-            composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
-            # num_density = structure.num_sites / structure.volume
-            num_density = len(composition.get_el_amt_dict())/structure.volume
-            df.set_value(i, 'number_density', num_density)
-    df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
-    df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
-    df_groupby_false = pd.DataFrame
-    df_groupby_true = pd.DataFrame
-    for name, group in df_2nd_groupby:
-        if not name:
-            df_groupby_false = group
-        elif name:
-            df_groupby_true = group
-    df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
-    return df_groupby, df_merge
-
-
 def analyze_df(prop):
     df = pd.read_pickle(prop + '.pkl')
     for i, row in df.iterrows():
         df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
-        # df.set_value(i, 'compound_class', get_compd_class(prop, row['reduced_cell_formula']))
     print df.sort_values('sg_diff').dropna().tail(60)
     print df.loc[(60 < df['space_group_x']) & (df['space_group_x'] < 65)]
     print df.sort_values('number_density_y').dropna().tail(60)
+
+
+class AddDescriptor:
+    def __init__(self, propname):
+        self.df = pd.read_pickle(propname + '.pkl')
+
+    def electronegativity(self):
+        for i, row in self.df.iterrows():
+            try:
+                electronegativity_std = get_std(get_pymatgen_eldata_lst(row['reduced_cell_formula'], 'X'))
+                self.df.loc[i, 'eleneg_std'] = electronegativity_std
+                if electronegativity_std < 0.70:
+                    self.df.loc[i, 'col_eleneg_std'] = 'b'
+                elif 0.70 <= electronegativity_std <= 1.40:
+                    self.df.loc[i, 'col_eleneg_std'] = 'g'
+                else:
+                    self.df.loc[i, 'col_eleneg_std'] = 'r'
+            except ValueError:
+                self.df.loc[i, 'col_eleneg_std'] = 'k'
+                continue
+        return self.df
+
+    def thermal_exp(self):
+        for i, row in self.df.iterrows():
+            try:
+                coeff_std = get_std(get_linear_thermal_expansion(row['composition']))
+                self.df.loc[i, 'linear_thermal_exp_coeff'] = coeff_std
+                if coeff_std < 20:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
+                elif coeff_std >= 20:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'r'
+                else:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
+            except ValueError:
+                self.df.loc[i, 'col_eleneg_std'] = 'k'
+                continue
+        return self.df
 
 
 if __name__ == '__main__':
@@ -464,11 +386,9 @@ if __name__ == '__main__':
     props = ['ht']
     for name in props:
         # grouped_df, merged_df = tags_group_merge_df(name)
-        # save_ddf_pkl(merged_df, name)
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
+        # merged_df.to_pickle(name + '.pkl')
         # analyze_df(name)
-        df_withdesc = add_descriptor_todf(name, 'electronegativity')
-        # withdesc = getattr(AddDescriptor(name), 'electronegativity')
-        # print withdesc()
+        df_withdesc = getattr(AddDescriptor(name), 'electronegativity')()
         plot_xy(df_withdesc, name)
