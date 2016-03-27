@@ -8,7 +8,6 @@ from matminer.descriptors.composition_features import *
 from pymatgen.matproj.rest import MPRester
 from collections import defaultdict
 
-
 client = pymongo.MongoClient()
 db = client.springer
 mpr = MPRester()
@@ -278,7 +277,7 @@ def tags_group_merge_df(prop):
                 df.set_value(i, 'density', None)
             structure = Structure.from_dict(row['structure'])
             composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
-            num_density = len(composition.get_el_amt_dict())/structure.volume
+            num_density = len(composition.get_el_amt_dict()) / structure.volume
             df.set_value(i, 'number_density', num_density)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
@@ -293,6 +292,7 @@ def tags_group_merge_df(prop):
     return df_groupby, df_merge
 
 
+# TODO: Check why black middle line in seaborn violin plots
 def plot_violin(df, propname):
     plot_props = ['density', 'space_group', 'number_density']
     for pro in plot_props:
@@ -304,11 +304,7 @@ def plot_violin(df, propname):
         # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
-def plot_xy(df, propname):
-    """
-
-    :return:
-    """
+def plot_xy(df, propname, descriptor=None):
     plot_props = ['density', 'space_group', 'number_density']
     for pro in plot_props:
         # fig, ax = plt.subplots()
@@ -320,8 +316,11 @@ def plot_xy(df, propname):
         #     label_cutoff = 0.75
         # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
         #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
-        # df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
-        df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=df['col_eleneg_std'])
+        if descriptor is None:
+            df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
+        else:
+            color_column = df[descriptor]
+            df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=color_column)
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if propname == 'hp':
@@ -341,11 +340,16 @@ def analyze_df(prop):
     print df.sort_values('number_density_y').dropna().tail(60)
 
 
+# TODO: Check how to automatically get stats (mean, median,..) from the descriptor column and use them to set limits
+# for plot colors
+# TODO: Check how to set legends in plots (return them here and pass them onto plot_xy()
 class AddDescriptor:
     def __init__(self, propname):
         self.df = pd.read_pickle(propname + '.pkl')
+        self.descriptor = ''
 
     def X(self):
+        self.descriptor = 'col_eleneg_std'
         for i, row in self.df.iterrows():
             try:
                 electronegativity_std = get_std(get_pymatgen_eldata_lst(row['reduced_cell_formula'], 'X'))
@@ -359,23 +363,24 @@ class AddDescriptor:
             except ValueError:
                 self.df.loc[i, 'col_eleneg_std'] = 'k'
                 continue
-        return self.df
+        return self.df, self.descriptor
 
-    def thermal_exp(self):
+    def coefficient_of_linear_thermal_expansion(self):
+        self.descriptor = 'col_thermalcoeff'
         for i, row in self.df.iterrows():
             try:
                 coeff_std = get_std(get_linear_thermal_expansion(row['reduced_cell_formula']))
                 self.df.loc[i, 'linear_thermal_exp_coeff'] = coeff_std
                 if coeff_std < 3.10:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'r'
+                    self.df.loc[i, 'col_thermalcoeff'] = 'r'
                 elif 3.10 <= coeff_std <= 7.45:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'g'
+                    self.df.loc[i, 'col_thermalcoeff'] = 'g'
                 else:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'b'
+                    self.df.loc[i, 'col_thermalcoeff'] = 'b'
             except:
-                self.df.loc[i, 'col_eleneg_std'] = 'k'
+                self.df.loc[i, 'col_thermalcoeff'] = 'k'
                 continue
-        return self.df
+        return self.df, self.descriptor
 
 
 if __name__ == '__main__':
@@ -387,6 +392,6 @@ if __name__ == '__main__':
         # plot_xy(merged_df, name)
         # merged_df.to_pickle(name + '.pkl')
         # analyze_df(name)
-        df_withdesc = getattr(AddDescriptor(name), 'thermal_exp')()
+        df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansion')()
         # print df_withdesc.describe()
-        plot_xy(df_withdesc, name)
+        plot_xy(df_desc, name, desc)
