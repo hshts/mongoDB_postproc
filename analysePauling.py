@@ -6,7 +6,6 @@ from pymatgen import Structure
 from getcoordination import getcoordination
 from matminer.descriptors.composition_features import *
 from pymatgen.matproj.rest import MPRester
-import itertools
 from collections import defaultdict
 
 
@@ -142,8 +141,7 @@ def get_meta_from_structure(structure):
             'nelements': len(elsyms),
             'formula': comp.formula,
             'reduced_cell_formula': comp.reduced_formula,
-            'reduced_cell_formula_abc': Composition(comp.reduced_formula)
-                .alphabetical_formula,
+            'reduced_cell_formula_abc': Composition(comp.reduced_formula).alphabetical_formula,
             'anonymized_formula': comp.anonymized_formula,
             'chemsystem': '-'.join(elsyms),
             'is_ordered': structure.is_ordered,
@@ -231,8 +229,7 @@ def set_hpht_dataset_tags():
     x = 0
     for doc in tagcoll.find({'structure': {'$exists': True}}, {'key': 1, 'is_hp': 1, 'is_ht': 1,
                                                                'metadata._structure.reduced_cell_formula':
-                                                                   1}).batch_size(
-        75):
+                                                                   1}).batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
@@ -367,15 +364,15 @@ class AddDescriptor:
     def thermal_exp(self):
         for i, row in self.df.iterrows():
             try:
-                coeff_std = get_std(get_linear_thermal_expansion(row['composition']))
+                coeff_std = get_std(get_linear_thermal_expansion(row['reduced_cell_formula']))
                 self.df.loc[i, 'linear_thermal_exp_coeff'] = coeff_std
-                if coeff_std < 20:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
-                elif coeff_std >= 20:
+                if coeff_std < 3.10:
                     self.df.loc[i, 'color_thermalcoeff'] = 'r'
+                elif 3.10 <= coeff_std <= 7.45:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'g'
                 else:
-                    self.df.loc[i, 'color_thermalcoeff'] = 'k'
-            except ValueError:
+                    self.df.loc[i, 'color_thermalcoeff'] = 'b'
+            except:
                 self.df.loc[i, 'col_eleneg_std'] = 'k'
                 continue
         return self.df
@@ -391,4 +388,5 @@ if __name__ == '__main__':
         # merged_df.to_pickle(name + '.pkl')
         # analyze_df(name)
         df_withdesc = getattr(AddDescriptor(name), 'thermal_exp')()
+        # print df_withdesc.describe()
         plot_xy(df_withdesc, name)
