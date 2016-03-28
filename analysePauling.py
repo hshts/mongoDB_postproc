@@ -227,6 +227,9 @@ def set_hpht_tags(doc):
 # TODO: add code for initilaizing all docs with is_hp_datatset = False = is_ht_dataset
 def set_hpht_dataset_tags():
     tagcoll = db['pauling_file_tags']
+    # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
+    tagcoll.update({'structure': {'$exists': True}}, {'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}},
+                   {'multi': True})
     comps_hp_true = set()
     comps_hp_false = set()
     comps_ht_true = set()
