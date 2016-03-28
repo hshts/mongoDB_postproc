@@ -393,8 +393,12 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    for doc in db['pauling_file_tags'].find_one({'key': 'sd_1214980'}):
-        set_hpht_tags()
+    x = 0
+    for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
+        x += 1
+        if x % 1000 == 0:
+            print x
+        set_hpht_tags(doc)
     '''
     props = ['ht']
     for name in props:
