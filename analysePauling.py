@@ -200,13 +200,13 @@ def set_hpht_tags(doc):
             ht_title = None
     elif ' ht' in title:
         ht_title = True
-    elif ' rt' in title:
+    elif ' rt' in title or ' lt' in title:
         ht_title = False
     else:
         ht_title = None
     if ' ht' in phase:
         ht_phase = True
-    elif ' rt' in phase:
+    elif ' rt' in phase or ' lt' in phase:
         ht_phase = False
     else:
         ht_phase = None
@@ -426,9 +426,9 @@ if __name__ == '__main__':
     for name in props:
         # coll_to_pickle(name)
         grouped_df, merged_df = tags_group_merge_df(name)
-        plot_violin(grouped_df, name)
-        plot_xy(merged_df, name)
-        merged_df.to_pickle(name + '.pkl')
+        # plot_violin(grouped_df, name)
+        # plot_xy(merged_df, name)
+        # merged_df.to_pickle(name + '.pkl')
         # analyze_df(name)
         # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansion')()
         # print df_withdesc.describe()
