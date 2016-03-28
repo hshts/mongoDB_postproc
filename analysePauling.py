@@ -224,7 +224,6 @@ def set_hpht_tags(doc):
             coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_phase}})
 
 
-# TODO: add code for initilaizing all docs with is_hp_datatset = False = is_ht_dataset
 def set_hpht_dataset_tags():
     tagcoll = db['pauling_file_tags']
     # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
@@ -268,6 +267,14 @@ def set_hpht_dataset_tags():
                 ht_tag = doc['is_ht']
                 if ht_tag is not None:
                     tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
+
+
+def create_colls():
+    # coll = db['pauling_file']
+    # coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
+    tagcoll = db['pauling_file_tags']
+    tagcoll.aggregate([{'$match': {'is_ht': False, 'is_hp_dataset': True}}, {'$out': 'pauling_file_tags_hp'}])
+    tagcoll.aggregate([{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_ht'}])
 
 
 def tags_group_merge_df(prop):
