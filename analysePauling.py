@@ -272,9 +272,14 @@ def set_hpht_dataset_tags():
 def create_colls():
     # coll = db['pauling_file']
     # coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
+    # coll.create_index(['key'], unique=True)
     tagcoll = db['pauling_file_tags']
-    tagcoll.aggregate([{'$match': {'is_ht': False, 'is_hp_dataset': True}}, {'$out': 'pauling_file_tags_hp'}])
-    tagcoll.aggregate([{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_ht'}])
+    hp_pipeline = [{'$match': {'is_ht': False, 'is_hp_dataset': True}}, {'$out': 'pauling_file_tags_hp'}]
+    tagcoll.aggregate(pipeline=hp_pipeline)
+    db['pauling_file_tags_hp'].create_index('key', unique=True)
+    ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_ht'}]
+    tagcoll.aggregate(pipeline=ht_pipeline)
+    db['pauling_file_tags_ht'].create_index('key', unique=True)
 
 
 def tags_group_merge_df(prop):
@@ -400,12 +405,15 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
+    create_colls()
+    '''
     x = 0
     for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
         set_hpht_tags(doc)
+    '''
     '''
     props = ['ht']
     for name in props:
