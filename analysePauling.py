@@ -228,16 +228,14 @@ def set_hpht_dataset_tags():
     tagcoll = db['pauling_file_tags']
     # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
     tagcoll.update({'structure': {'$exists': True}}, {'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}},
-                   {'multi': True})
+                   multi=True)
     comps_hp_true = set()
     comps_hp_false = set()
     comps_ht_true = set()
     comps_ht_false = set()
     comps_ids = defaultdict(list)
     x = 0
-    for doc in tagcoll.find({'structure': {'$exists': True}}, {'key': 1, 'is_hp': 1, 'is_ht': 1,
-                                                               'metadata._structure.reduced_cell_formula':
-                                                                   1}).batch_size(75):
+    for doc in tagcoll.find({'structure': {'$exists': True}}).batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
@@ -262,24 +260,33 @@ def set_hpht_dataset_tags():
     for comp in ht_unique_comps:
         ids_toset = comps_ids[comp]
         for id in ids_toset:
-            # Remove docs with 'is_ht' = None (null in mongo)
-            for doc in tagcoll.find_one({'key': id}):
+            # Remove docs with 'is_ht' = None ('null' in mongo)
+            for doc in tagcoll.find({'key': id}):
                 ht_tag = doc['is_ht']
                 if ht_tag is not None:
                     tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
 
 
-def create_colls():
-    # coll = db['pauling_file']
-    # coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
-    # coll.create_index(['key'], unique=True)
+def create_tagscoll():
+    db['pauling_file_tags'].drop()
+    coll = db['pauling_file']
+    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
+
+
+def create_hphtcolls():
+    db['pauling_file_tags_hp'].drop()
+    db['pauling_file_tags_ht'].drop()
     tagcoll = db['pauling_file_tags']
     hp_pipeline = [{'$match': {'is_ht': False, 'is_hp_dataset': True}}, {'$out': 'pauling_file_tags_hp'}]
     tagcoll.aggregate(pipeline=hp_pipeline)
-    db['pauling_file_tags_hp'].create_index('key', unique=True)
     ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_ht'}]
     tagcoll.aggregate(pipeline=ht_pipeline)
-    db['pauling_file_tags_ht'].create_index('key', unique=True)
+
+
+def coll_to_pickle(prop):
+    cursor = db['pauling_file_tags_' + prop].find()
+    df = pd.DataFrame(list(cursor))
+    df.to_pickle('pauling_file_tags_' + prop + '.pkl')
 
 
 def tags_group_merge_df(prop):
@@ -312,7 +319,6 @@ def tags_group_merge_df(prop):
     return df_groupby, df_merge
 
 
-# TODO: Check why black middle line in seaborn violin plots
 def plot_violin(df, propname):
     plot_props = ['density', 'space_group', 'number_density']
     for pro in plot_props:
@@ -405,7 +411,7 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    create_colls()
+    # create_tagscoll()
     '''
     x = 0
     for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
@@ -414,15 +420,16 @@ if __name__ == '__main__':
             print x
         set_hpht_tags(doc)
     '''
-    '''
-    props = ['ht']
+    # set_hpht_dataset_tags()
+    # create_hphtcolls()
+    props = ['hp', 'ht']
     for name in props:
-        # grouped_df, merged_df = tags_group_merge_df(name)
-        # plot_violin(grouped_df, name)
-        # plot_xy(merged_df, name)
-        # merged_df.to_pickle(name + '.pkl')
+        # coll_to_pickle(name)
+        grouped_df, merged_df = tags_group_merge_df(name)
+        plot_violin(grouped_df, name)
+        plot_xy(merged_df, name)
+        merged_df.to_pickle(name + '.pkl')
         # analyze_df(name)
-        df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansion')()
+        # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansion')()
         # print df_withdesc.describe()
-        plot_xy(df_desc, name, desc)
-    '''
+        # plot_xy(df_desc, name, desc)
