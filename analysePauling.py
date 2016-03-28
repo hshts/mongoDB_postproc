@@ -160,7 +160,13 @@ def add_metastructuredata():
             z += 1
 
 
-def detect_hp_ht(doc):
+def get_compd_class(prop, reduced_formula):
+    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
+    return df.loc[df['reduced_cell_formula'] == reduced_formula]['metadata'].iloc[0]['_Springer']['geninfo'][
+        'Compound Class(es)']
+
+
+def set_hpht_tags(doc):
     coll = db['pauling_file_tags']
     phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
     title = doc['metadata']['_Springer']['title']
@@ -218,6 +224,7 @@ def detect_hp_ht(doc):
             coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_phase}})
 
 
+# TODO: add code for initilaizing all docs with is_hp_datatset = False = is_ht_dataset
 def set_hpht_dataset_tags():
     tagcoll = db['pauling_file_tags']
     comps_hp_true = set()
@@ -253,13 +260,11 @@ def set_hpht_dataset_tags():
     for comp in ht_unique_comps:
         ids_toset = comps_ids[comp]
         for id in ids_toset:
-            tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
-
-
-def get_compd_class(prop, reduced_formula):
-    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
-    return df.loc[df['reduced_cell_formula'] == reduced_formula]['metadata'].iloc[0]['_Springer']['geninfo'][
-        'Compound Class(es)']
+            # Remove docs with 'is_ht' = None (null in mongo)
+            for doc in tagcoll.find_one({'key': id}):
+                ht_tag = doc['is_ht']
+                if ht_tag is not None:
+                    tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
 
 
 def tags_group_merge_df(prop):
@@ -331,15 +336,6 @@ def plot_xy(df, propname, descriptor=None):
         sns.set_style('whitegrid')
 
 
-def analyze_df(prop):
-    df = pd.read_pickle(prop + '.pkl')
-    for i, row in df.iterrows():
-        df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
-    print df.sort_values('sg_diff').dropna().tail(60)
-    print df.loc[(60 < df['space_group_x']) & (df['space_group_x'] < 65)]
-    print df.sort_values('number_density_y').dropna().tail(60)
-
-
 # TODO: Check how to automatically get stats (mean, median,..) from the descriptor column and use them to set limits
 # for plot colors
 # TODO: Check how to set legends in plots (return them here and pass them onto plot_xy()
@@ -383,8 +379,20 @@ class AddDescriptor:
         return self.df, self.descriptor
 
 
+def analyze_df(prop):
+    df = pd.read_pickle(prop + '.pkl')
+    for i, row in df.iterrows():
+        df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
+    print df.sort_values('sg_diff').dropna().tail(60)
+    print df.loc[(60 < df['space_group_x']) & (df['space_group_x'] < 65)]
+    print df.sort_values('number_density_y').dropna().tail(60)
+
+
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
+    for doc in db['pauling_file_tags'].find_one({'key': 'sd_1214980'}):
+        set_hpht_tags()
+    '''
     props = ['ht']
     for name in props:
         # grouped_df, merged_df = tags_group_merge_df(name)
@@ -395,3 +403,4 @@ if __name__ == '__main__':
         df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansion')()
         # print df_withdesc.describe()
         plot_xy(df_desc, name, desc)
+    '''
