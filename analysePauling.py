@@ -166,10 +166,16 @@ def get_compd_class(prop, reduced_formula):
         'Compound Class(es)']
 
 
+def create_tagscoll():
+    db['pauling_file_tags'].drop()
+    coll = db['pauling_file']
+    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
+
+
 def set_hpht_tags(doc):
     coll = db['pauling_file_tags']
-    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
     title = doc['metadata']['_Springer']['title']
+    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
     hp_title = None
     hp_phase = None
     if 'p =' in title or ' hp' in title:
@@ -224,8 +230,128 @@ def set_hpht_tags(doc):
             coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_phase}})
 
 
+def test_create_tagscoll():
+    db['test3_pauling_file_tags'].drop()
+    db['pauling_file'].aggregate(
+        [{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'test3_pauling_file_tags'}])
+
+
+def test1_set_hpht_tags(doc):
+    coll = db['test1_pauling_file_tags']
+    title = doc['metadata']['_Springer']['title']
+    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+    hp_title = None
+    hp_phase = None
+    if 'p =' in title or ' hp' in title:
+        hp_title = True
+    else:
+        hp_title = None
+    if ' hp' in phase:
+        hp_phase = True
+    else:
+        hp_phase = None
+    if hp_title == hp_phase:
+        if hp_title is not None:
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
+        else:
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+    else:
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+        exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
+        try:
+            temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
+            temp_exp = float(re.sub('\(.*\)', '', temp_str))
+            if temp_exp > 400:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+            else:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+        except:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+    else:
+        coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+
+
+def test2_set_hpht_tags(doc):
+    coll = db['test2_pauling_file_tags']
+    title = doc['metadata']['_Springer']['title']
+    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+    hp_title = None
+    hp_phase = None
+    if 'p =' in title or ' hp' in title:
+        hp_title = True
+    else:
+        hp_title = None
+    if ' hp' in phase:
+        hp_phase = True
+    else:
+        hp_phase = None
+    if hp_title == hp_phase:
+        if hp_title is not None:
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
+        else:
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+    else:
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+        exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
+        try:
+            temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
+            temp_exp = float(re.sub('\(.*\)', '', temp_str))
+            if temp_exp > 400:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+            else:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+        except:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+    else:
+        if ' ht' in title or ' ht' in phase:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+        else:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+
+
+def test3_set_hpht_tags(doc):
+    coll = db['test3_pauling_file_tags']
+    title = doc['metadata']['_Springer']['title']
+    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+    hp_title = None
+    hp_phase = None
+    if 'p =' in title or ' hp' in title:
+        hp_title = True
+    else:
+        hp_title = None
+    if ' hp' in phase:
+        hp_phase = True
+    else:
+        hp_phase = None
+    if hp_title == hp_phase:
+        if hp_title is not None:
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
+        else:
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+    else:
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+        exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
+        try:
+            temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
+            temp_exp = float(re.sub('\(.*\)', '', temp_str))
+            if temp_exp > 400:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+            else:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+        except:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+    else:
+        if ' ht' in phase:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+        else:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+
+
 def set_hpht_dataset_tags():
-    tagcoll = db['pauling_file_tags']
+    tagcoll = db['test2_pauling_file_tags']
     # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
     tagcoll.update({'structure': {'$exists': True}}, {'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}},
                    multi=True)
@@ -267,12 +393,6 @@ def set_hpht_dataset_tags():
                     tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
 
 
-def create_tagscoll():
-    db['pauling_file_tags'].drop()
-    coll = db['pauling_file']
-    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
-
-
 def create_hphtcolls():
     db['pauling_file_tags_hp'].drop()
     db['pauling_file_tags_ht'].drop()
@@ -280,6 +400,13 @@ def create_hphtcolls():
     hp_pipeline = [{'$match': {'is_ht': False, 'is_hp_dataset': True}}, {'$out': 'pauling_file_tags_hp'}]
     tagcoll.aggregate(pipeline=hp_pipeline)
     ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_ht'}]
+    tagcoll.aggregate(pipeline=ht_pipeline)
+
+
+def test_create_hphtcolls():
+    db['pauling_file_tags_httest2'].drop()
+    tagcoll = db['test2_pauling_file_tags']
+    ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_httest2'}]
     tagcoll.aggregate(pipeline=ht_pipeline)
 
 
@@ -308,6 +435,36 @@ def tags_group_merge_df(prop):
             df.set_value(i, 'number_density', num_density)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
+    df_groupby_false = pd.DataFrame
+    df_groupby_true = pd.DataFrame
+    for name, group in df_2nd_groupby:
+        if not name:
+            df_groupby_false = group
+        elif name:
+            df_groupby_true = group
+    df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
+    return df_groupby, df_merge
+
+
+def test_tags_group_merge_df(prop):
+    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
+    for i, row in df.iterrows():
+        if row['metadata']['_structure']['is_valid']:
+            df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
+            try:
+                df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
+            except:
+                df.set_value(i, 'space_group', None)
+            try:
+                df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
+            except IndexError as e:
+                df.set_value(i, 'density', None)
+            structure = Structure.from_dict(row['structure'])
+            composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
+            num_density = len(composition.get_el_amt_dict()) / structure.volume
+            df.set_value(i, 'number_density', num_density)
+    df_groupby = df.groupby(['reduced_cell_formula', 'is_ht'], as_index=False).mean()
+    df_2nd_groupby = df_groupby.groupby('is_ht', as_index=False)
     df_groupby_false = pd.DataFrame
     df_groupby_true = pd.DataFrame
     for name, group in df_2nd_groupby:
@@ -411,21 +568,24 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
+    # test_create_tagscoll()
     # create_tagscoll()
     '''
     x = 0
-    for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
+    for doc in db['test2_pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
-        set_hpht_tags(doc)
-    '''
+        test2_set_hpht_tags(doc)
+    # '''
     # set_hpht_dataset_tags()
     # create_hphtcolls()
-    props = ['hp', 'ht']
-    for name in props:
-        # coll_to_pickle(name)
-        grouped_df, merged_df = tags_group_merge_df(name)
+    test_create_hphtcolls()
+    # props = ['httest3']
+    # for name in props:
+    #     coll_to_pickle(name)
+    #     grouped_df, merged_df = test_tags_group_merge_df(name)
+    #     print merged_df.describe()
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
         # merged_df.to_pickle(name + '.pkl')
