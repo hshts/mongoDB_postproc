@@ -166,18 +166,16 @@ def get_compd_class(prop, reduced_formula):
         'Compound Class(es)']
 
 
-def create_tagscoll():
-    db['pauling_file_tags'].drop()
-    coll = db['pauling_file']
-    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
-
-
-def set_hpht_tags(doc):
+def old_set_hpht_tags(doc):
+    """
+    Sets temperature tags based on labels in the title and phase label fields
+    :param doc: Pauling file record
+    :return:
+    """
     coll = db['pauling_file_tags']
     title = doc['metadata']['_Springer']['title']
     phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-    hp_title = None
-    hp_phase = None
+    # Set pressure tags
     if 'p =' in title or ' hp' in title:
         hp_title = True
     else:
@@ -193,8 +191,8 @@ def set_hpht_tags(doc):
             coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     else:
         coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    # Set temperature tags
     ht_title = None
-    ht_phase = None
     if 'T =' in title:
         try:
             temp_k = float(re.findall(r'T\s*=\s*(.*)\s*K', title)[0])
@@ -230,18 +228,32 @@ def set_hpht_tags(doc):
             coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_phase}})
 
 
-def test_create_tagscoll():
-    db['test3_pauling_file_tags'].drop()
-    db['pauling_file'].aggregate(
-        [{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'test3_pauling_file_tags'}])
+def create_tagscoll():
+    db['pauling_file_tags'].drop()
+    coll = db['pauling_file']
+    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
+    db['pauling_file_tags'].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
-def test1_set_hpht_tags(doc):
-    coll = db['test1_pauling_file_tags']
+def create_tagscoll_3():
+    db['pauling_file_tags_3'].drop()
+    coll = db['pauling_file']
+    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags_3'}])
+    db['pauling_file_tags_3'].create_index([('key', pymongo.ASCENDING)], unique=True)
+
+
+def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
+    """
+    Sets temperature tags only based on the value of the field 'metadata._Springer.expdetails.temperature'
+    :param lt_highcutff: highest temperature for low temperature measurments
+    :param ht_lowcutoff: lowest temperature for high temperature measurement
+    :param doc: Pauling file record
+    :return:
+    """
+    coll = db['pauling_file_tags']
     title = doc['metadata']['_Springer']['title']
     phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-    hp_title = None
-    hp_phase = None
+    # Set pressure tags
     if 'p =' in title or ' hp' in title:
         hp_title = True
     else:
@@ -257,27 +269,37 @@ def test1_set_hpht_tags(doc):
             coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     else:
         coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    # Set temperature tags
     if 'temperature' in doc['metadata']['_Springer']['expdetails']:
         exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
         try:
             temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
             temp_exp = float(re.sub('\(.*\)', '', temp_str))
-            if temp_exp > 400:
+            if temp_exp > ht_lowcutoff:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
-            else:
+            elif temp_exp < lt_highcutff:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+            else:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
         except:
             coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
     else:
         coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
 
 
-def test2_set_hpht_tags(doc):
-    coll = db['test2_pauling_file_tags']
+def set_hpht_tags_3(doc, lt_highcutoff, ht_lowcutoff):
+    """
+    Sets temperature tags based on the value of the field 'metadata._Springer.expdetails.temperature' AND
+    'metadata._Springer.geninfo.Phase Label(s)'
+    :param lt_highcutff: highest temperature for low temperature measurments
+    :param ht_lowcutoff: lowest temperature for high temperature measurement
+    :param doc: Pauling file record
+    :return:
+    """
+    coll = db['pauling_file_tags_3']
     title = doc['metadata']['_Springer']['title']
     phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-    hp_title = None
-    hp_phase = None
+    # Set pressure tags
     if 'p =' in title or ' hp' in title:
         hp_title = True
     else:
@@ -293,15 +315,18 @@ def test2_set_hpht_tags(doc):
             coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     else:
         coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    # Set temperature tags
     if 'temperature' in doc['metadata']['_Springer']['expdetails']:
         exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
         try:
             temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
             temp_exp = float(re.sub('\(.*\)', '', temp_str))
-            if temp_exp > 400:
+            if temp_exp > ht_lowcutoff:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
-            else:
+            elif temp_exp < lt_highcutoff:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+            else:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
         except:
             coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
     else:
@@ -311,47 +336,51 @@ def test2_set_hpht_tags(doc):
             coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
 
 
-def test3_set_hpht_tags(doc):
-    coll = db['test3_pauling_file_tags']
-    title = doc['metadata']['_Springer']['title']
-    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-    hp_title = None
-    hp_phase = None
-    if 'p =' in title or ' hp' in title:
-        hp_title = True
-    else:
-        hp_title = None
-    if ' hp' in phase:
-        hp_phase = True
-    else:
-        hp_phase = None
-    if hp_title == hp_phase:
-        if hp_title is not None:
-            coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
-        else:
-            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-    else:
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
-    if 'temperature' in doc['metadata']['_Springer']['expdetails']:
-        exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
-        try:
-            temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
-            temp_exp = float(re.sub('\(.*\)', '', temp_str))
-            if temp_exp > 400:
-                coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
-            else:
-                coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
-        except:
-            coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-    else:
-        if ' ht' in phase:
-            coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
-        else:
-            coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
-
-
 def set_hpht_dataset_tags():
-    tagcoll = db['test2_pauling_file_tags']
+    tagcoll = db['pauling_file_tags']
+    # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
+    tagcoll.update({'structure': {'$exists': True}}, {'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}},
+                   multi=True)
+    comps_hp_true = set()
+    comps_hp_false = set()
+    comps_ht_true = set()
+    comps_ht_false = set()
+    comps_ids = defaultdict(list)
+    x = 0
+    for doc in tagcoll.find({'structure': {'$exists': True}}).batch_size(75):
+        x += 1
+        if x % 1000 == 0:
+            print x
+        composition = doc['metadata']['_structure']['reduced_cell_formula']
+        if doc['is_hp'] is True:
+            comps_hp_true.add(composition)
+        elif doc['is_hp'] is False:
+            comps_hp_false.add(composition)
+        if doc['is_ht'] is True:
+            comps_ht_true.add(composition)
+        elif doc['is_ht'] is False:
+            comps_ht_false.add(composition)
+        comps_ids[composition].append(doc['key'])
+    hp_unique_comps = comps_hp_true.intersection(comps_hp_false)
+    print len(hp_unique_comps)
+    for comp in hp_unique_comps:
+        ids_toset = comps_ids[comp]
+        for id in ids_toset:
+            tagcoll.update({'key': id}, {'$set': {'is_hp_dataset': True}})
+    ht_unique_comps = comps_ht_true.intersection(comps_ht_false)
+    print len(ht_unique_comps)
+    for comp in ht_unique_comps:
+        ids_toset = comps_ids[comp]
+        for id in ids_toset:
+            # Remove docs with 'is_ht' = None ('null' in mongo)
+            for doc in tagcoll.find({'key': id}):
+                ht_tag = doc['is_ht']
+                if ht_tag is not None:
+                    tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
+
+
+def set_hpht_dataset_tags_3():
+    tagcoll = db['pauling_file_tags_3']
     # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
     tagcoll.update({'structure': {'$exists': True}}, {'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}},
                    multi=True)
@@ -399,15 +428,18 @@ def create_hphtcolls():
     tagcoll = db['pauling_file_tags']
     hp_pipeline = [{'$match': {'is_ht': False, 'is_hp_dataset': True}}, {'$out': 'pauling_file_tags_hp'}]
     tagcoll.aggregate(pipeline=hp_pipeline)
+    db['pauling_file_tags_hp'].create_index([('key', pymongo.ASCENDING)], unique=True)
     ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_ht'}]
     tagcoll.aggregate(pipeline=ht_pipeline)
+    db['pauling_file_tags_ht'].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
-def test_create_hphtcolls():
-    db['pauling_file_tags_httest2'].drop()
-    tagcoll = db['test2_pauling_file_tags']
-    ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_httest2'}]
+def create_hphtcolls_3():
+    db['pauling_file_tags_ht_3'].drop()
+    tagcoll = db['pauling_file_tags_3']
+    ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_ht_3'}]
     tagcoll.aggregate(pipeline=ht_pipeline)
+    db['pauling_file_tags_ht_3'].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
 def coll_to_pickle(prop):
@@ -416,7 +448,7 @@ def coll_to_pickle(prop):
     df.to_pickle('pauling_file_tags_' + prop + '.pkl')
 
 
-def tags_group_merge_df(prop):
+def group_merge_df(prop):
     df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
     for i, row in df.iterrows():
         if row['metadata']['_structure']['is_valid']:
@@ -446,7 +478,7 @@ def tags_group_merge_df(prop):
     return df_groupby, df_merge
 
 
-def test_tags_group_merge_df(prop):
+def group_merge_df_3(prop):
     df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
     for i, row in df.iterrows():
         if row['metadata']['_structure']['is_valid']:
@@ -568,27 +600,25 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    # test_create_tagscoll()
-    # create_tagscoll()
-    '''
+    create_tagscoll()
+    # '''
     x = 0
-    for doc in db['test2_pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
+    for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
-        test2_set_hpht_tags(doc)
+        set_hpht_tags(doc, 350, 450)
     # '''
-    # set_hpht_dataset_tags()
-    # create_hphtcolls()
-    test_create_hphtcolls()
-    # props = ['httest3']
-    # for name in props:
-    #     coll_to_pickle(name)
-    #     grouped_df, merged_df = test_tags_group_merge_df(name)
-    #     print merged_df.describe()
-        # plot_violin(grouped_df, name)
-        # plot_xy(merged_df, name)
-        # merged_df.to_pickle(name + '.pkl')
+    set_hpht_dataset_tags()
+    create_hphtcolls()
+    props = ['hp', 'ht']
+    for name in props:
+        coll_to_pickle(name)
+        grouped_df, merged_df = group_merge_df(name)
+        print merged_df.describe()
+        plot_violin(grouped_df, name)
+        plot_xy(merged_df, name)
+        merged_df.to_pickle(name + '.pkl')
         # analyze_df(name)
         # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansion')()
         # print df_withdesc.describe()
