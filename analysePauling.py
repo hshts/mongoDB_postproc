@@ -330,8 +330,8 @@ def set_hpht_tags_3(doc, lt_highcutoff, ht_lowcutoff):
         except:
             coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
     else:
-        if ' ht' in title or ' ht' in phase:
-            coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+        if ' ht' in phase:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
         else:
             coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
 
@@ -435,8 +435,12 @@ def create_hphtcolls():
 
 
 def create_hphtcolls_3():
+    db['pauling_file_tags_hp_3'].drop()
     db['pauling_file_tags_ht_3'].drop()
     tagcoll = db['pauling_file_tags_3']
+    hp_pipeline = [{'$match': {'is_ht': False, 'is_hp_dataset': True}}, {'$out': 'pauling_file_tags_hp_3'}]
+    tagcoll.aggregate(pipeline=hp_pipeline)
+    db['pauling_file_tags_hp_3'].create_index([('key', pymongo.ASCENDING)], unique=True)
     ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True}}, {'$out': 'pauling_file_tags_ht_3'}]
     tagcoll.aggregate(pipeline=ht_pipeline)
     db['pauling_file_tags_ht_3'].create_index([('key', pymongo.ASCENDING)], unique=True)
@@ -600,24 +604,24 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    create_tagscoll()
+    create_tagscoll_3()
     # '''
     x = 0
-    for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
+    for doc in db['pauling_file_tags_3'].find({'structure': {'$exists': True}}).batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
-        set_hpht_tags(doc, 350, 450)
+        set_hpht_tags_3(doc, 350, 450)
     # '''
-    set_hpht_dataset_tags()
-    create_hphtcolls()
-    props = ['hp', 'ht']
+    set_hpht_dataset_tags_3()
+    create_hphtcolls_3()
+    props = ['ht_3']
     for name in props:
-        coll_to_pickle(name)
-        grouped_df, merged_df = group_merge_df(name)
+        # coll_to_pickle(name)
+        grouped_df, merged_df = group_merge_df_3(name)
         print merged_df.describe()
-        plot_violin(grouped_df, name)
-        plot_xy(merged_df, name)
+        plot_violin(grouped_df, 'ht')
+        plot_xy(merged_df, 'ht')
         merged_df.to_pickle(name + '.pkl')
         # analyze_df(name)
         # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansion')()
