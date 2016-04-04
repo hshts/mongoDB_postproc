@@ -358,6 +358,10 @@ def group_merge_df(prop):
             composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
             num_density = len(composition.get_el_amt_dict()) / structure.volume
             df.set_value(i, 'number_density', num_density)
+        if row['metadata']['_structure']['is_ordered']:
+            df.set_value(i, 'is_ordered', 1)
+        else:
+            df.set_value(i, 'is_ordered', 0)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
     df_groupby_false = pd.DataFrame
@@ -498,14 +502,15 @@ if __name__ == '__main__':
     props = ['ht']
     for name in props:
         # coll_to_pickle(name)
-        # grouped_df, merged_df = group_merge_df(name)
-        # print merged_df.describe()
+        grouped_df, merged_df = group_merge_df(name)
+        print merged_df.head(20)
+        print merged_df.describe()
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
-        # merged_df.to_pickle(name + '.pkl')
-        # analyze_df
+        merged_df.to_pickle(name + '.pkl')
+        # analyze_df(name)
         # df_desc, desc = getattr(AddDescriptor(name), 'X')()
         # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansio')()
-        df_desc, desc = getattr(AddDescriptor(name), 'magnetic')()
+        # df_desc, desc = getattr(AddDescriptor(name), 'magnetic')()
         # print df_withdesc.describe()
-        plot_xy(df_desc, name, desc)
+        # plot_xy(df_desc, name, desc)
