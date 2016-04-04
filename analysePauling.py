@@ -451,6 +451,27 @@ class AddDescriptor:
                 continue
         return self.df, self.descriptor
 
+    def magnetic(self):
+        self.descriptor = 'col_mag'
+        ferromagnetic = ['Fe', 'Co', 'Ni', 'Gd']
+        paramagnetic = ['Li', 'O', 'Na', 'Mg', 'Al', 'Ca', 'Ti', 'Mn', 'Sr', 'Zr', 'Mo', 'Ru', 'Rh', 'Pd', 'Sn', 'Ba',
+                        'Ce', 'Nd', 'Sm', 'Eu', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'W', 'Os', 'Ir', 'Pt']
+        for i, row in self.df.iterrows():
+            is_magnetic = False
+            elements = Composition(row['reduced_cell_formula']).elements
+            for elem in elements:
+                if elem.symbol in ferromagnetic:
+                    self.df.loc[i, 'col_mag'] = 'b'
+                    is_magnetic = True
+                    break
+                elif elem.symbol in paramagnetic:
+                    self.df.loc[i, 'col_mag'] = 'g'
+                    is_magnetic = True
+                    break
+            if not is_magnetic:
+                self.df.loc[i, 'col_mag'] = 'r'
+        return self.df, self.descriptor
+
 
 def analyze_df(prop):
     df = pd.read_pickle(prop + '.pkl')
@@ -463,7 +484,7 @@ def analyze_df(prop):
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    create_tagscoll()
+    # create_tagscoll()
     '''
     x = 0
     for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
@@ -474,15 +495,17 @@ if __name__ == '__main__':
     # '''
     # set_hpht_dataset_tags()
     # create_hphtcolls()
-    # props = ['hp', 'ht']
-    # for name in props:
-    #     coll_to_pickle(name)
-    #     grouped_df, merged_df = group_merge_df(name)
-    #     print merged_df.describe()
-    #     plot_violin(grouped_df, name)
-    #     plot_xy(merged_df, name)
-    #     merged_df.to_pickle(name + '.pkl')
-        # analyze_df(name)
-        # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansion')()
+    props = ['ht']
+    for name in props:
+        # coll_to_pickle(name)
+        # grouped_df, merged_df = group_merge_df(name)
+        # print merged_df.describe()
+        # plot_violin(grouped_df, name)
+        # plot_xy(merged_df, name)
+        # merged_df.to_pickle(name + '.pkl')
+        # analyze_df
+        # df_desc, desc = getattr(AddDescriptor(name), 'X')()
+        # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansio')()
+        df_desc, desc = getattr(AddDescriptor(name), 'magnetic')()
         # print df_withdesc.describe()
-        # plot_xy(df_desc, name, desc)
+        plot_xy(df_desc, name, desc)
