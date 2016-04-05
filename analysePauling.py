@@ -462,18 +462,14 @@ class AddDescriptor:
     def is_magnetic(self):
         self.descriptor = 'col_mag'
         ferromagnetic = ['Fe', 'Co', 'Ni', 'Gd']
-        paramagnetic = ['Li', 'O', 'Na', 'Mg', 'Al', 'Ca', 'Ti', 'Mn', 'Sr', 'Zr', 'Mo', 'Ru', 'Rh', 'Pd', 'Sn', 'Ba',
-                        'Ce', 'Nd', 'Sm', 'Eu', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'W', 'Os', 'Ir', 'Pt']
+        # paramagnetic = ['Li', 'O', 'Na', 'Mg', 'Al', 'Ca', 'Ti', 'Mn', 'Sr', 'Zr', 'Mo', 'Ru', 'Rh', 'Pd', 'Sn', 'Ba',
+        #                 'Ce', 'Nd', 'Sm', 'Eu', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'W', 'Os', 'Ir', 'Pt']
         for i, row in self.df.iterrows():
             is_magnetic = False
             elements = Composition(row['reduced_cell_formula']).elements
             for elem in elements:
                 if elem.symbol in ferromagnetic:
                     self.df.loc[i, 'col_mag'] = 'b'
-                    is_magnetic = True
-                    break
-                elif elem.symbol in paramagnetic:
-                    self.df.loc[i, 'col_mag'] = 'g'
                     is_magnetic = True
                     break
             if not is_magnetic:
@@ -525,7 +521,7 @@ if __name__ == '__main__':
     for name in props:
         # coll_to_pickle(name)
         grouped_df, merged_df = group_merge_df(name)
-        print merged_df.head(20)
+        # print merged_df.head(10)
         # print merged_df.describe()
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
@@ -533,7 +529,7 @@ if __name__ == '__main__':
         # analyze_df(name)
         # df_desc, desc = getattr(AddDescriptor(name), 'X')()
         # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansio')()
-        # df_desc, desc = getattr(AddDescriptor(name), 'is_magnetic')()
+        df_desc, desc = getattr(AddDescriptor(name), 'is_magnetic')()
         # df_desc, desc = getattr(AddDescriptor(name), 'is_ordered')()
         # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
-        # plot_xy(df_desc, name, desc)
+        plot_xy(df_desc, name, desc)
