@@ -7,6 +7,7 @@ from getcoordination import getcoordination
 from matminer.descriptors.composition_features import *
 from pymatgen.matproj.rest import MPRester
 from collections import defaultdict
+import numpy as np
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -362,6 +363,9 @@ def group_merge_df(prop):
             df.set_value(i, 'is_ordered', 1)
         else:
             df.set_value(i, 'is_ordered', 0)
+        # mean_coord = np.average(getcoordination(Structure.from_dict(row['structure'])).values())
+        # print mean_coord
+        # df.set_value(i, 'coordination', mean_coord)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
     df_groupby_false = pd.DataFrame
@@ -488,6 +492,12 @@ class AddDescriptor:
                 self.df.loc[i, 'col_ord'] = 'k'
         return self.df, self.descriptor
 
+    def coordination(self):
+        self.descriptor = 'col_coord'
+        for i, row in self.df.iterrows():
+            print getcoordination(row['structure'])
+        return self.df, self.descriptor
+
 
 def analyze_df(prop):
     df = pd.read_pickle(prop + '.pkl')
@@ -514,8 +524,8 @@ if __name__ == '__main__':
     props = ['ht']
     for name in props:
         # coll_to_pickle(name)
-        # grouped_df, merged_df = group_merge_df(name)
-        # print merged_df.head(20)
+        grouped_df, merged_df = group_merge_df(name)
+        print merged_df.head(20)
         # print merged_df.describe()
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
@@ -524,6 +534,6 @@ if __name__ == '__main__':
         # df_desc, desc = getattr(AddDescriptor(name), 'X')()
         # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansio')()
         # df_desc, desc = getattr(AddDescriptor(name), 'is_magnetic')()
-        df_desc, desc = getattr(AddDescriptor(name), 'is_ordered')()
-        # print df_withdesc.describe()
-        plot_xy(df_desc, name, desc)
+        # df_desc, desc = getattr(AddDescriptor(name), 'is_ordered')()
+        # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
+        # plot_xy(df_desc, name, desc)
