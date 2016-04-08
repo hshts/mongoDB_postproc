@@ -1,10 +1,12 @@
 import pymongo
 from pymatgen.analysis.structure_analyzer import VoronoiCoordFinder
 from collections import defaultdict
-from chronograph.chronograph import Chronograph
+import numpy as np
+from scipy.stats import mode
 
 client = pymongo.MongoClient()
 db = client.springer
+
 
 def getcoordination(structure):
     species = []
@@ -18,11 +20,13 @@ def getcoordination(structure):
         # print 'Voronoi coord number for {} = {}'.format(species[siteno],
         #                                                 VoronoiCoordFinder(structure).get_coordination_number(siteno))
         coordination = 0
-        try:
-            weights = VoronoiCoordFinder(structure).get_voronoi_polyhedra(siteno).values()
-        except AttributeError:
-            # print struct_dict['sites'][siteno]['species']
-            continue
+        # print 'getcoordination.py - species = {}'.format(struct_dict['sites'][siteno]['species'])
+        # try:
+        weights = VoronoiCoordFinder(structure).get_voronoi_polyhedra(siteno).values()
+        # print VoronoiCoordFinder(structure).get_coordinated_sites(siteno)
+        # except AttributeError:
+        #     print 'Attribute error for {}'.format(struct_dict['sites'][siteno]['species'])
+        #     continue
         # print 'Weights for {} = {}'.format(species[siteno], weights)
         max_weight = max(weights)
         for weight in weights:
@@ -31,6 +35,11 @@ def getcoordination(structure):
         species_coord_dictlst[species[siteno]].append(coordination)
         # print 'Calculated coordination for {} = {}'.format(species[siteno], coordination)
         # print '-----------'
-    for el in species_coord_dictlst:
-        species_coord[el] = max(species_coord_dictlst[el])
+    return species_coord_dictlst
+
+
+def get_mean_specie_sites(coords_defaultdict):
+    species_coord = {}
+    for el in coords_defaultdict:
+        species_coord[el] = np.average(coords_defaultdict[el])
     return species_coord
