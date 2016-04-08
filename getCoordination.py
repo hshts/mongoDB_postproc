@@ -43,3 +43,10 @@ def get_mean_specie_sites(coords_defaultdict):
     for el in coords_defaultdict:
         species_coord[el] = np.average(coords_defaultdict[el])
     return species_coord
+
+
+def get_mode_specie_sites(coords_defaultdict):
+    species_coord = {}
+    for el in coords_defaultdict:
+        species_coord[el] = mode(coords_defaultdict[el])[0]
+    return species_coord
