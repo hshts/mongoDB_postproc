@@ -11,7 +11,6 @@ db = client.springer
 def getcoordination(structure):
     species = []
     species_coord_dictlst = defaultdict(list)
-    species_coord = {}
     struct_dict = structure.as_dict()
     no_of_sites = len(struct_dict['sites'])
     for specie in struct_dict['sites']:
@@ -50,3 +49,5 @@ def get_mode_specie_sites(coords_defaultdict):
     for el in coords_defaultdict:
         species_coord[el] = mode(coords_defaultdict[el])[0]
     return species_coord
+
+

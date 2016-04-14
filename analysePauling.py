@@ -6,7 +6,7 @@ from pymatgen import Structure
 from getcoordination import getcoordination, get_mean_specie_sites
 from matminer.descriptors.composition_features import *
 from pymatgen.matproj.rest import MPRester
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import numpy as np
 import json
 import multiprocessing as mp
@@ -340,6 +340,17 @@ def create_hphtcolls():
     db['pauling_file_tags_ht'].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
+def remove_deuterium(prop):
+    coll = db['pauling_file_tags_' + prop]
+    cursor = coll.find()
+    df = pd.DataFrame(list(cursor))
+    for i, row in df.iterrows():
+        for el in row['metadata']['_structure']['elements']:
+            if el == 'D':
+                coll.remove({'key': row['key']})
+                break
+
+
 def coll_to_pickle(prop):
     cursor = db['pauling_file_tags_' + prop].find()
     df = pd.DataFrame(list(cursor))
@@ -553,112 +564,46 @@ def analyze_df(prop):
     # print df.sort_values('number_density_y').dropna().tail(60)
 
 
-def test_multiprocessing(split_df):
-    for i, row in split_df.iterrows():
-        if row['metadata']['_structure']['is_valid']:
-            split_df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
-            try:
-                split_df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
-            except:
-                split_df.set_value(i, 'space_group', None)
-            try:
-                split_df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
-            except IndexError as e:
-                split_df.set_value(i, 'density', None)
-            structure = Structure.from_dict(row['structure'])
-            composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
-            num_density = len(composition.get_el_amt_dict()) / structure.volume
-            split_df.set_value(i, 'number_density', num_density)
-        if row['metadata']['_structure']['is_ordered']:
-            split_df.set_value(i, 'is_ordered', 1)
+def get_coordination(idx_struct):
+    specie_meancoord = get_mean_specie_sites(getcoordination(Structure.from_dict(idx_struct[1])))
+    el_amt = Structure.from_dict(idx_struct[1]).composition.get_el_amt_dict()
+    cations = []
+    anions = []
+    X_cutoff = 2.5
+    for el in el_amt:
+        if Element(el).X < X_cutoff:
+            cations.append(el)
         else:
-            split_df.set_value(i, 'is_ordered', 0)
-        print row['key']
-        specie_meancoord = get_mean_specie_sites(getcoordination(Structure.from_dict(row['structure'])))
-        el_amt = Structure.from_dict(row['structure']).composition.get_el_amt_dict()
-        cations = []
-        anions = []
-        X_cutoff = 2.5
-        for el in el_amt:
-            if Element(el).X < X_cutoff:
-                cations.append(el)
-            else:
-                anions.append(el)
-        total_cation_coords = 0
-        total_cation_amts = 0
-        for cation in cations:
-            try:
-                total_cation_coords += (el_amt[cation] * specie_meancoord[cation])
-            except KeyError:
-                for sp in specie_meancoord:
-                    if cation in sp:
-                        cation_key = sp
-                        break
-                total_cation_coords += (el_amt[cation] * specie_meancoord[cation_key])
-            total_cation_amts += el_amt[cation]
-        cations_weighted_coord = total_cation_coords / total_cation_amts
-        total_anion_coords = 0
-        total_anion_amts = 0
-        for anion in anions:
-            try:
-                total_anion_coords += (el_amt[anion] * specie_meancoord[anion])
-            except KeyError:
-                for sp in specie_meancoord:
-                    if anion in sp:
-                        anion_key = sp
-                        break
-                total_anion_coords += (el_amt[anion] * specie_meancoord[anion_key])
-            total_anion_amts += el_amt[anion]
-        anions_weighted_coord = total_anion_coords / total_anion_amts
-        split_df.set_value(i, 'cation_coord', cations_weighted_coord)
-        split_df.set_value(i, 'anion_coord', anions_weighted_coord)
-        print '----------'
-
-
-def test1_multiprocessing(split_df):
-    for i, row in split_df.iterrows():
-        if row['metadata']['_structure']['is_valid']:
-            print row['key']
-            specie_meancoord = get_mean_specie_sites(getcoordination(Structure.from_dict(row['structure'])))
-            el_amt = Structure.from_dict(row['structure']).composition.get_el_amt_dict()
-            cations = []
-            anions = []
-            X_cutoff = 2.5
-            for el in el_amt:
-                if Element(el).X < X_cutoff:
-                    cations.append(el)
-                else:
-                    anions.append(el)
-            total_cation_coords = 0
-            total_cation_amts = 0
-            for cation in cations:
-                try:
-                    total_cation_coords += (el_amt[cation] * specie_meancoord[cation])
-                except KeyError:
-                    for sp in specie_meancoord:
-                        if cation in sp:
-                            cation_key = sp
-                            break
-                    total_cation_coords += (el_amt[cation] * specie_meancoord[cation_key])
-                total_cation_amts += el_amt[cation]
-            cations_weighted_coord = total_cation_coords / total_cation_amts
-            total_anion_coords = 0
-            total_anion_amts = 0
-            for anion in anions:
-                try:
-                    total_anion_coords += (el_amt[anion] * specie_meancoord[anion])
-                except KeyError:
-                    for sp in specie_meancoord:
-                        if anion in sp:
-                            anion_key = sp
-                            break
-                    total_anion_coords += (el_amt[anion] * specie_meancoord[anion_key])
-                total_anion_amts += el_amt[anion]
-            anions_weighted_coord = total_anion_coords / total_anion_amts
-            split_df.set_value(i, 'cation_coord', cations_weighted_coord)
-            split_df.set_value(i, 'anion_coord', anions_weighted_coord)
-            print '----------'
-
+            anions.append(el)
+    total_cation_coords = 0
+    total_cation_amts = 0
+    for cation in cations:
+        try:
+            total_cation_coords += (el_amt[cation] * specie_meancoord[cation])
+        except KeyError:
+            for sp in specie_meancoord:
+                if cation in sp:
+                    cation_key = sp
+                    break
+            total_cation_coords += (el_amt[cation] * specie_meancoord[cation_key])
+        total_cation_amts += el_amt[cation]
+    cations_weighted_coord = total_cation_coords / total_cation_amts
+    total_anion_coords = 0
+    total_anion_amts = 0
+    for anion in anions:
+        try:
+            total_anion_coords += (el_amt[anion] * specie_meancoord[anion])
+        except KeyError:
+            for sp in specie_meancoord:
+                if anion in sp:
+                    anion_key = sp
+                    break
+            total_anion_coords += (el_amt[anion] * specie_meancoord[anion_key])
+        total_anion_amts += el_amt[anion]
+    anions_weighted_coord = total_anion_coords / total_anion_amts
+    print cations_weighted_coord, anions_weighted_coord
+    print '----------'
+    return idx_struct[0], cations_weighted_coord, anions_weighted_coord
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
@@ -675,33 +620,31 @@ if __name__ == '__main__':
     # create_hphtcolls()
     # props = ['ht']
     # for name in props:
-    # coll_to_pickle(name)
-    # grouped_df, merged_df = group_merge_df(name)
-    # print merged_df.head(10)
-    # print merged_df.describe()
-    # plot_violin(grouped_df, name)
-    # plot_xy(merged_df, name)
-    # merged_df.to_pickle(name + '.pkl')
-    # analyze_df(name)
-    # df_desc, desc = getattr(AddDescriptor(name), 'X')()
-    # df_desc, desc = getattr(AddDescriptor(name), 'coefficient_of_linear_thermal_expansio')()
-    # df_desc, desc = getattr(AddDescriptor(name), 'is_magnetic')()
-    # df_desc, desc = getattr(AddDescriptor(name), 'is_ordered')()
-    # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
-    # print df_desc.head()
-    # print df_desc.describe()
-    # plot_xy(df_desc, name, desc)
+    #     coll_to_pickle(name)
+        # grouped_df, merged_df = group_merge_df(name)
+        # print merged_df.head(10)
+        # print merged_df.describe()
+        # plot_violin(grouped_df, name)
+        # plot_xy(merged_df, name)
+        # merged_df.to_pickle(name + '.pkl')
+        # analyze_df(name)
+        # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
+        # print df_desc.head()
+        # print df_desc.describe()
+        # plot_xy(df_desc, name, desc)
     '''
     big_df = pd.read_pickle('pauling_file_tags_ht.pkl')
-    htkeys_lst = big_df['key'].tolist()
+    idxs = big_df.index.tolist()
     p = mp.Pool(processes=4)
-    # split_dfs = np.array_split(big_df, 4)
-    # pool_results = p.map(test_multiprocessing, split_dfs)
-    pool_results = p.map(test1_multiprocessing, htkeys_lst)
+    job_args = [(idx, big_df.ix[idx, 'structure']) for idx in idxs]
+    pool_results = p.map(get_coordination, job_args)
     p.close()
     p.join()
-    parts = pd.concat(pool_results)
-    big_df = pd.concat([big_df, parts], axis=1)
-    print big_df.head(10)
+    for idx_coord in pool_results:
+        big_df.set_value(idx_coord[0], 'cation_coord', idx_coord[1])
+        big_df.set_value(idx_coord[0], 'anion_coord', idx_coord[2])
     print big_df.describe()
     # '''
+    props = ['hp', 'ht']
+    for name in props:
+        remove_deuterium(name)
