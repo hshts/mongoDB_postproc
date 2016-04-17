@@ -378,48 +378,6 @@ def group_merge_df(prop):
             df.set_value(i, 'is_ordered', 1)
         else:
             df.set_value(i, 'is_ordered', 0)
-        # '''
-        print row['key']
-        specie_meancoord = get_mean_specie_sites(getcoordination(Structure.from_dict(row['structure'])))
-        el_amt = Structure.from_dict(row['structure']).composition.get_el_amt_dict()
-        cations = []
-        anions = []
-        X_cutoff = 2.5
-        for el in el_amt:
-            if Element(el).X < X_cutoff:
-                cations.append(el)
-            else:
-                anions.append(el)
-        total_cation_coords = 0
-        total_cation_amts = 0
-        for cation in cations:
-            try:
-                total_cation_coords += (el_amt[cation] * specie_meancoord[cation])
-            except KeyError:
-                for sp in specie_meancoord:
-                    if cation in sp:
-                        cation_key = sp
-                        break
-                total_cation_coords += (el_amt[cation] * specie_meancoord[cation_key])
-            total_cation_amts += el_amt[cation]
-        cations_weighted_coord = total_cation_coords / total_cation_amts
-        total_anion_coords = 0
-        total_anion_amts = 0
-        for anion in anions:
-            try:
-                total_anion_coords += (el_amt[anion] * specie_meancoord[anion])
-            except KeyError:
-                for sp in specie_meancoord:
-                    if anion in sp:
-                        anion_key = sp
-                        break
-                total_anion_coords += (el_amt[anion] * specie_meancoord[anion_key])
-            total_anion_amts += el_amt[anion]
-        anions_weighted_coord = total_anion_coords / total_anion_amts
-        df.set_value(i, 'cation_coord', cations_weighted_coord)
-        df.set_value(i, 'anion_coord', anions_weighted_coord)
-        print '----------'
-        # '''
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
     df_groupby_false = pd.DataFrame
@@ -439,9 +397,6 @@ def plot_violin(df, propname):
         sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
                        split=True)
         plt.show()
-        # tips = sns.load_dataset("tips")
-        # print tips.head()
-        # sns.violinplot(x="day", y="total_bill", hue="smoker", data=tips, palette="muted", split=True)
 
 
 def plot_xy(df, propname, descriptor=None):
@@ -605,9 +560,24 @@ def get_coordination(idx_struct):
     print '----------'
     return idx_struct[0], cations_weighted_coord, anions_weighted_coord
 
+
+def plot_common_comp():
+    hp_df = pd.read_pickle('hp.pkl')
+    print hp_df.head()
+    ht_df = pd.read_pickle('ht.pkl')
+    print ht_df.head()
+    hpht_df = pd.merge(hp_df, ht_df, on='reduced_cell_formula')
+    for i, row in hpht_df.iterrows():
+        hpht_df.set_value(i, 'sg_diff_hp', row['space_group_y_x'] - row['space_group_x_x'])
+        hpht_df.set_value(i, 'sg_diff_ht', row['space_group_y_y'] - row['space_group_x_y'])
+    # print hpht_df
+    hpht_df.plot(x='sg_diff_ht', y='sg_diff_hp', kind='scatter')
+    plt.show()
+    print hpht_df.sort(['sg_diff_hp', 'sg_diff_ht'])
+
+
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    # create_tagscoll()
     '''
     x = 0
     for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
@@ -616,12 +586,12 @@ if __name__ == '__main__':
             print x
         set_hpht_tags(doc, 350, 450)
     # '''
-    # set_hpht_dataset_tags()
-    # create_hphtcolls()
-    # props = ['ht']
-    # for name in props:
-    #     coll_to_pickle(name)
-        # grouped_df, merged_df = group_merge_df(name)
+    props = ['hp', 'ht']
+    for name in props:
+        # coll_to_pickle(name)
+        grouped_df, merged_df = group_merge_df(name)
+        # print grouped_df.head(10)
+        # print grouped_df.describe()
         # print merged_df.head(10)
         # print merged_df.describe()
         # plot_violin(grouped_df, name)
@@ -645,6 +615,4 @@ if __name__ == '__main__':
         big_df.set_value(idx_coord[0], 'anion_coord', idx_coord[2])
     print big_df.describe()
     # '''
-    props = ['hp', 'ht']
-    for name in props:
-        remove_deuterium(name)
+    # plot_common_comp()
