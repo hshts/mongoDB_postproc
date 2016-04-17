@@ -35,11 +35,21 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
     title = doc['metadata']['_Springer']['title']
     phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
     # Set pressure tags
-    if 'p =' in title or ' hp' in title:
-        if 'p =' in title:
+    if 'p =' in title:
+        try:
             pressure_str = re.findall(r'p = (.*) GPa', title)[0]
             pressure_val = float(re.sub('\(.*\)', '', pressure_str))
             coll.update({'key': doc['key']}, {'$set': {'pressure (GPa)': pressure_val}})
+            if pressure_val > 0.00010132501:
+                hp_title = True
+            else:
+                hp_title = False
+        except UnicodeEncodeError as e:
+            print e
+            print title
+            hp_title = False  # Not set to 'None' as there are only 2 ids (sd_1601569, sd_1601568) that are
+            # unparsable and they are both < 1atm
+    elif ' hp' in title:
         hp_title = True
     else:
         hp_title = None
@@ -52,6 +62,8 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
             coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
         else:
             coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+    elif hp_title is False:
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     else:
         coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
     # Set temperature tags
