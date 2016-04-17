@@ -47,8 +47,8 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
         except UnicodeEncodeError as e:
             print e
             print title
-            hp_title = False  # Not set to 'None' as there are only 2 ids (sd_1601569, sd_1601568) that are
-            # unparsable and they are both < 1atm
+            hp_title = False  # Not set to 'None' as there are only 3 ids (sd_1601567, sd_1601568, sd_1601569) that are
+            # unparsable and they are all < 1atm
     elif ' hp' in title:
         hp_title = True
     else:
@@ -88,7 +88,7 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
 def set_hpht_dataset_tags():
     tagcoll = db['pauling_file_min_tags1']
     # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
-    tagcoll.update({'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}}, multi=True)
+    tagcoll.update({}, {'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}}, multi=True)
     comps_hp_true = set()
     comps_hp_false = set()
     comps_ht_true = set()
@@ -100,13 +100,13 @@ def set_hpht_dataset_tags():
         if x % 1000 == 0:
             print x
         composition = doc['metadata']['_structure']['reduced_cell_formula']
-        if doc['is_hp'] is True and doc['is_ht'] is False:
+        if doc['is_hp'] is True and doc['is_ht'] in [False, None]:
             comps_hp_true.add(composition)
-        elif doc['is_hp'] is False:
+        elif doc['is_hp'] is False and doc['is_ht'] in [False, None]:
             comps_hp_false.add(composition)
-        if doc['is_ht'] is True:
+        if doc['is_ht'] is True and doc['is_hp'] is False:
             comps_ht_true.add(composition)
-        elif doc['is_ht'] is False:
+        elif doc['is_ht'] is False and doc['is_hp'] is False:
             comps_ht_false.add(composition)
         comps_ids[composition].append(doc['key'])
     hp_unique_comps = comps_hp_true.intersection(comps_hp_false)
@@ -380,8 +380,8 @@ def plot_common_comp():
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    create_tagscoll()
-    # '''
+    # create_tagscoll()
+    '''
     x = 0
     for doc in db['pauling_file_min_tags1'].find().batch_size(75):
         x += 1
@@ -389,6 +389,7 @@ if __name__ == '__main__':
             print x
         set_hpht_tags(doc, 350, 450)
     # '''
+    set_hpht_dataset_tags()
     # props = ['hp', 'ht']
     # for name in props:
     #     coll_to_pickle(name)
