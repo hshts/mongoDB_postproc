@@ -20,13 +20,13 @@ def create_tagscoll():
     db[min_tags_collname].drop()
     coll.aggregate([{'$match': {'structure': {'$exists': True}, 'metadata._structure.is_valid': True}},
                     {'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': min_tags_collname}])
+    db[min_tags_collname].create_index([('key', pymongo.ASCENDING)], unique=True)
     # Remove Deuterium
     for doc in db[min_tags_collname].find().batch_size(75):
         for el in doc['metadata']['_structure']['elements']:
             if el == 'D':
                 db[min_tags_collname].remove({'key': doc['key']})
                 break
-    db[min_tags_collname].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
 def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
@@ -131,20 +131,6 @@ def set_hpht_dataset_tags():
                 ht_tag = doc['is_ht']
                 if ht_tag is not None:
                     tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
-
-
-def create_hphtcolls():
-    db['pauling_file_tags_hp'].drop()
-    db['pauling_file_tags_ht'].drop()
-    tagcoll = db['pauling_file_tags']
-    hp_pipeline = [{'$match': {'is_ht': False, 'is_hp_dataset': True, 'metadata._structure.is_valid': True}},
-                   {'$out': 'pauling_file_tags_hp'}]
-    tagcoll.aggregate(pipeline=hp_pipeline)
-    db['pauling_file_tags_hp'].create_index([('key', pymongo.ASCENDING)], unique=True)
-    ht_pipeline = [{'$match': {'is_hp': False, 'is_ht_dataset': True, 'metadata._structure.is_valid': True}},
-                   {'$out': 'pauling_file_tags_ht'}]
-    tagcoll.aggregate(pipeline=ht_pipeline)
-    db['pauling_file_tags_ht'].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
 def coll_to_pickle(prop):
