@@ -61,124 +61,298 @@ class Testtags(unittest.TestCase):
     # PbTe
     def test1(self):
         for doc in coll.find({'key': 'sd_0456664'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     def test2(self):
         for doc in coll.find({'key': 'sd_1610906'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test3(self):
         for doc in coll.find({'key': 'sd_1610909'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test4(self):
         for doc in coll.find({'key': 'sd_0456666'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     def test5(self):
         for doc in coll.find({'key': 'sd_0529813'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test6(self):
         for doc in coll.find({'key': 'sd_0533656'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test7(self):
         for doc in coll.find({'key': 'sd_0456647'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     # ZrO2
     def test8(self):
         for doc in coll.find({'key': 'sd_1252340'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test9(self):
         for doc in coll.find({'key': 'sd_1250760'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     def test10(self):
         for doc in coll.find({'key': 'sd_1626333'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test11(self):
         for doc in coll.find({'key': 'sd_1211700'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test12(self):
         for doc in coll.find({'key': 'sd_0541122'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test13(self):
         for doc in coll.find({'key': 'sd_0541206'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test14(self):
         for doc in coll.find({'key': 'sd_2040724'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test15(self):
         for doc in coll.find({'key': 'sd_0453509'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test16(self):
         for doc in coll.find({'key': 'sd_1521666'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': True})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     def test17(self):
         for doc in coll.find({'key': 'sd_0560825'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     # Ag
     def test18(self):
         for doc in coll.find({'key': 'sd_0552728'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test19(self):
         for doc in coll.find({'key': 'sd_1822505'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     ###
     def test20(self):
         for doc in coll.find({'key': 'sd_1212949'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     def test21(self):
         for doc in coll.find({'key': 'sd_0455995'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     # Ca
     def test22(self):
         for doc in coll.find({'key': 'sd_1925112'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test23(self):
         for doc in coll.find({'key': 'sd_1400924'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test24(self):
         for doc in coll.find({'key': 'sd_1928058'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     def test25(self):
         for doc in coll.find({'key': 'sd_1932324'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     ###
     def test26(self):
         for doc in coll.find({'key': 'sd_1502611'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     def test27(self):
         for doc in coll.find({'key': 'sd_1252608'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
     def test28(self):
         for doc in coll.find({'key': 'sd_1701652'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': True})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': False, 'is_ht': None})
 
     def test29(self):
         for doc in coll.find({'key': 'sd_1310301'}):
-            self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            print doc['metadata']['_Springer']['title']
+            print doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+            if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+                print doc['metadata']['_Springer']['expdetails']['temperature']
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': False})
+            else:
+                self.assertEqual(detect_hp_ht(doc), {'is_hp': True, 'is_ht': None})
 
 
 if __name__ == '__main__':
