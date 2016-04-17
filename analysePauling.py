@@ -15,10 +15,12 @@ mpr = MPRester()
 
 
 def create_tagscoll():
-    db['pauling_file_min_tags'].drop()
+    db['pauling_file_min_tags1'].drop()
     coll = db['pauling_file']
-    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_min_tags'}])
-    db['pauling_file_min_tags'].create_index([('key', pymongo.ASCENDING)], unique=True)
+    coll.aggregate(
+        [{'$match': {'structure': {'$exists': True}}}, {'$project': {'key': 1, 'metadata': 1, 'structure': 1}},
+         {'$out': 'pauling_file_min_tags1'}])
+    db['pauling_file_min_tags1'].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
 def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
@@ -29,11 +31,14 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
     :param doc: Pauling file record
     :return:
     """
-    coll = db['pauling_file_tags']
+    coll = db['pauling_file_min_tags1']
     title = doc['metadata']['_Springer']['title']
     phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
     # Set pressure tags
     if 'p =' in title or ' hp' in title:
+        if 'p =' in title:
+            pressure = float(re.findall(r'p = (.*) GPa', title)[0])
+            coll.update({'key': doc['key']}, {'$set': {'pressure (GPa)': pressure}})
         hp_title = True
     else:
         hp_title = None
@@ -60,7 +65,7 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
             else:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-            coll.update({'key': doc['key']}, {'$set': {'temperature': temp_exp}})
+            coll.update({'key': doc['key']}, {'$set': {'temperature (K)': temp_exp}})
         except:
             coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
     else:
@@ -366,7 +371,7 @@ if __name__ == '__main__':
     create_tagscoll()
     '''
     x = 0
-    for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
+    for doc in db['pauling_file_min_tags1'].find({'structure': {'$exists': True}}).batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
@@ -376,18 +381,18 @@ if __name__ == '__main__':
     # for name in props:
     #     coll_to_pickle(name)
     #     grouped_df, merged_df = group_merge_df(name)
-        # print grouped_df.head(10)
-        # print grouped_df.describe()
-        # print merged_df.head(10)
-        # print merged_df.describe()
-        # plot_violin(grouped_df, name)
-        # plot_xy(merged_df, name)
-        # merged_df.to_pickle(name + '.pkl')
-        # analyze_df(name)
-        # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
-        # print df_desc.head()
-        # print df_desc.describe()
-        # plot_xy(df_desc, name, desc)
+    # print grouped_df.head(10)
+    # print grouped_df.describe()
+    # print merged_df.head(10)
+    # print merged_df.describe()
+    # plot_violin(grouped_df, name)
+    # plot_xy(merged_df, name)
+    # merged_df.to_pickle(name + '.pkl')
+    # analyze_df(name)
+    # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
+    # print df_desc.head()
+    # print df_desc.describe()
+    # plot_xy(df_desc, name, desc)
     '''
     big_df = pd.read_pickle('pauling_file_tags_ht.pkl')
     idxs = big_df.index.tolist()
