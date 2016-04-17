@@ -37,8 +37,9 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
     # Set pressure tags
     if 'p =' in title or ' hp' in title:
         if 'p =' in title:
-            pressure = float(re.findall(r'p = (.*) GPa', title)[0])
-            coll.update({'key': doc['key']}, {'$set': {'pressure (GPa)': pressure}})
+            pressure_str = re.findall(r'p = (.*) GPa', title)[0]
+            pressure_val = re.sub('\(.*\)', '', pressure_str)
+            coll.update({'key': doc['key']}, {'$set': {'pressure (GPa)': pressure_val}})
         hp_title = True
     else:
         hp_title = None
@@ -58,14 +59,14 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
         exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
         try:
             temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
-            temp_exp = float(re.sub('\(.*\)', '', temp_str))
-            if temp_exp > ht_lowcutoff:
+            temp_val = float(re.sub('\(.*\)', '', temp_str))
+            if temp_val > ht_lowcutoff:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
-            elif temp_exp < lt_highcutff:
+            elif temp_val < lt_highcutff:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
             else:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-            coll.update({'key': doc['key']}, {'$set': {'temperature (K)': temp_exp}})
+            coll.update({'key': doc['key']}, {'$set': {'temperature (K)': temp_val}})
         except:
             coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
     else:
@@ -368,10 +369,10 @@ def plot_common_comp():
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    create_tagscoll()
-    '''
+    # create_tagscoll()
+    # '''
     x = 0
-    for doc in db['pauling_file_min_tags1'].find({'structure': {'$exists': True}}).batch_size(75):
+    for doc in db['pauling_file_min_tags1'].find().batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
