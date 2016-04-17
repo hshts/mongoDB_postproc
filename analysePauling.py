@@ -15,10 +15,10 @@ mpr = MPRester()
 
 
 def create_tagscoll():
-    db['pauling_file_tags'].drop()
+    db['pauling_file_min_tags'].drop()
     coll = db['pauling_file']
-    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_tags'}])
-    db['pauling_file_tags'].create_index([('key', pymongo.ASCENDING)], unique=True)
+    coll.aggregate([{'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': 'pauling_file_min_tags'}])
+    db['pauling_file_min_tags'].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
 def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
@@ -362,6 +362,7 @@ def plot_common_comp():
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
+    create_tagscoll()
     '''
     x = 0
     for doc in db['pauling_file_tags'].find({'structure': {'$exists': True}}).batch_size(75):
@@ -370,10 +371,10 @@ if __name__ == '__main__':
             print x
         set_hpht_tags(doc, 350, 450)
     # '''
-    props = ['hp', 'ht']
-    for name in props:
-        # coll_to_pickle(name)
-        grouped_df, merged_df = group_merge_df(name)
+    # props = ['hp', 'ht']
+    # for name in props:
+    #     coll_to_pickle(name)
+    #     grouped_df, merged_df = group_merge_df(name)
         # print grouped_df.head(10)
         # print grouped_df.describe()
         # print merged_df.head(10)
