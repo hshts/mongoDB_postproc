@@ -60,6 +60,7 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
             else:
                 coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+            coll.update({'key': doc['key']}, {'$set': {'temperature': temp_exp}})
         except:
             coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
     else:
