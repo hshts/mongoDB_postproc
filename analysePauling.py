@@ -15,12 +15,18 @@ mpr = MPRester()
 
 
 def create_tagscoll():
-    db['pauling_file_min_tags1'].drop()
     coll = db['pauling_file']
-    coll.aggregate(
-        [{'$match': {'structure': {'$exists': True}}}, {'$project': {'key': 1, 'metadata': 1, 'structure': 1}},
-         {'$out': 'pauling_file_min_tags1'}])
-    db['pauling_file_min_tags1'].create_index([('key', pymongo.ASCENDING)], unique=True)
+    min_tags_collname = 'pauling_file_min_tags1'
+    db[min_tags_collname].drop()
+    coll.aggregate([{'$match': {'structure': {'$exists': True}, 'metadata._structure.is_valid': True}},
+                    {'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': min_tags_collname}])
+    # Remove Deuterium
+    for doc in db[min_tags_collname].find().batch_size(75):
+        for el in doc['metadata']['_structure']['elements']:
+            if el == 'D':
+                db[min_tags_collname].remove({'key': doc['key']})
+                break
+    db[min_tags_collname].create_index([('key', pymongo.ASCENDING)], unique=True)
 
 
 def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
@@ -139,17 +145,6 @@ def create_hphtcolls():
                    {'$out': 'pauling_file_tags_ht'}]
     tagcoll.aggregate(pipeline=ht_pipeline)
     db['pauling_file_tags_ht'].create_index([('key', pymongo.ASCENDING)], unique=True)
-
-
-def remove_deuterium(prop):
-    coll = db['pauling_file_tags_' + prop]
-    cursor = coll.find()
-    df = pd.DataFrame(list(cursor))
-    for i, row in df.iterrows():
-        for el in row['metadata']['_structure']['elements']:
-            if el == 'D':
-                coll.remove({'key': row['key']})
-                break
 
 
 def coll_to_pickle(prop):
@@ -380,8 +375,8 @@ def plot_common_comp():
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    # create_tagscoll()
-    '''
+    create_tagscoll()
+    # '''
     x = 0
     for doc in db['pauling_file_min_tags1'].find().batch_size(75):
         x += 1
