@@ -38,7 +38,7 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
     if 'p =' in title or ' hp' in title:
         if 'p =' in title:
             pressure_str = re.findall(r'p = (.*) GPa', title)[0]
-            pressure_val = re.sub('\(.*\)', '', pressure_str)
+            pressure_val = float(re.sub('\(.*\)', '', pressure_str))
             coll.update({'key': doc['key']}, {'$set': {'pressure (GPa)': pressure_val}})
         hp_title = True
     else:
@@ -74,22 +74,21 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
 
 
 def set_hpht_dataset_tags():
-    tagcoll = db['pauling_file_tags']
+    tagcoll = db['pauling_file_min_tags1']
     # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
-    tagcoll.update({'structure': {'$exists': True}}, {'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}},
-                   multi=True)
+    tagcoll.update({'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}}, multi=True)
     comps_hp_true = set()
     comps_hp_false = set()
     comps_ht_true = set()
     comps_ht_false = set()
     comps_ids = defaultdict(list)
     x = 0
-    for doc in tagcoll.find({'structure': {'$exists': True}}).batch_size(75):
+    for doc in tagcoll.find().batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
         composition = doc['metadata']['_structure']['reduced_cell_formula']
-        if doc['is_hp'] is True:
+        if doc['is_hp'] is True and doc['is_ht'] is False:
             comps_hp_true.add(composition)
         elif doc['is_hp'] is False:
             comps_hp_false.add(composition)
@@ -369,7 +368,7 @@ def plot_common_comp():
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    # create_tagscoll()
+    create_tagscoll()
     # '''
     x = 0
     for doc in db['pauling_file_min_tags1'].find().batch_size(75):
