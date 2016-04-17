@@ -11,14 +11,9 @@ coll = db['pauling_file_tags']
 def detect_hp_ht(doc):
     tags = {}
     coll = db['pauling_file_tags']
-    try:
-        phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-        title = doc['metadata']['_Springer']['title']
-    except KeyError as e:
-        print e, 'Key not found'
-        return
-    hp_title = None
-    hp_phase = None
+    title = doc['metadata']['_Springer']['title']
+    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+    # Set pressure tags
     if 'p =' in title or ' hp' in title:
         hp_title = True
     else:
@@ -30,53 +25,35 @@ def detect_hp_ht(doc):
     if hp_title == hp_phase:
         if hp_title is not None:
             tags['is_hp'] = hp_title
-            # coll.update({'key': doc['key']}, {'$set': {'is_ht': hp_title}})
+            # coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
         else:
             tags['is_hp'] = False
-            # coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+            # coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     else:
         tags['is_hp'] = True
-        # coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
-    ht_title = None
-    ht_phase = None
-    if 'T =' in title:
+        # coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+    # Set temperature tags
+    if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+        exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
         try:
-            temp_k = float(re.findall(r'T\s*=\s*(.*)\s*K', title)[0])
-            if temp_k > 400:
-                ht_title = True
-            elif temp_k <= 400:
-                ht_title = False
+            temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
+            temp_exp = float(re.sub('\(.*\)', '', temp_str))
+            if temp_exp > 450:
+                tags['is_ht'] = True
+                # coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+            elif temp_exp < 350:
+                tags['is_ht'] = False
+                # coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+            else:
+                tags['is_ht'] = None
+                # coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+            # coll.update({'key': doc['key']}, {'$set': {'temperature': temp_exp}})
         except:
-            ht_title = None
-    elif ' ht' in title:
-        ht_title = True
-    elif ' rt' in title:
-        ht_title = False
+            tags['is_ht'] = None
+            # coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
     else:
-        ht_title = None
-    if ' ht' in phase:
-        ht_phase = True
-    elif ' rt' in phase:
-        ht_phase = False
-    else:
-        ht_phase = None
-    if ht_title == ht_phase:
-        if ht_title is not None:
-            tags['is_ht'] = ht_title
-            # coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_title}})
-        else:
-            tags['is_ht'] = False
-            # coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
-    elif ht_title is not None and ht_phase is not None:
         tags['is_ht'] = None
         # coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-    else:
-        if ht_title is not None:
-            tags['is_ht'] = ht_title
-            # coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_title}})
-        else:
-            tags['is_ht'] = ht_phase
-            # coll.update({'key': doc['key']}, {'$set': {'is_ht': ht_phase}})
     return tags
 
 
