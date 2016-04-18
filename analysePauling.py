@@ -133,14 +133,15 @@ def set_hpht_dataset_tags():
                     tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
 
 
-def coll_to_pickle(prop):
-    cursor = db['pauling_file_tags_' + prop].find()
+def save_hpht(prop):
+    tagcoll = db['pauling_file_min_tags1']
+    cursor = tagcoll.find({'is_'+ prop + '_dataset': True})
     df = pd.DataFrame(list(cursor))
-    df.to_pickle('pauling_file_tags_' + prop + '.pkl')
+    df.to_pickle(prop + '.pkl')
 
 
 def group_merge_df(prop):
-    df = pd.read_pickle('pauling_file_tags_' + prop + '.pkl')
+    df = pd.read_pickle(prop + '.pkl')
     for i, row in df.iterrows():
         if row['metadata']['_structure']['is_valid']:
             df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
@@ -345,9 +346,9 @@ def get_coordination(idx_struct):
 
 
 def plot_common_comp():
-    hp_df = pd.read_pickle('hp.pkl')
+    hp_df = pd.read_pickle('hp_merged.pkl')
     print hp_df.head()
-    ht_df = pd.read_pickle('ht.pkl')
+    ht_df = pd.read_pickle('ht_merged.pkl')
     print ht_df.head()
     hpht_df = pd.merge(hp_df, ht_df, on='reduced_cell_formula')
     for i, row in hpht_df.iterrows():
@@ -361,8 +362,8 @@ def plot_common_comp():
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    create_tagscoll()
-    # '''
+    # create_tagscoll()
+    '''
     x = 0
     for doc in db['pauling_file_min_tags1'].find().batch_size(75):
         x += 1
@@ -370,23 +371,23 @@ if __name__ == '__main__':
             print x
         set_hpht_tags(doc, 350, 450)
     # '''
-    set_hpht_dataset_tags()
-    # props = ['hp', 'ht']
+    # set_hpht_dataset_tags()
+    props = ['hp', 'ht']
     # for name in props:
-    #     coll_to_pickle(name)
-    #     grouped_df, merged_df = group_merge_df(name)
-    # print grouped_df.head(10)
-    # print grouped_df.describe()
-    # print merged_df.head(10)
-    # print merged_df.describe()
-    # plot_violin(grouped_df, name)
-    # plot_xy(merged_df, name)
-    # merged_df.to_pickle(name + '.pkl')
-    # analyze_df(name)
-    # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
-    # print df_desc.head()
-    # print df_desc.describe()
-    # plot_xy(df_desc, name, desc)
+        # save_hpht(name)
+        # grouped_df, merged_df = group_merge_df(name)
+        # print grouped_df.head(10)
+        # print grouped_df.describe()
+        # print merged_df.head(10)
+        # print merged_df.describe()
+        # plot_violin(grouped_df, name)
+        # plot_xy(merged_df, name)
+        # merged_df.to_pickle(name + '_merged.pkl')
+        # analyze_df(name)
+        # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
+        # print df_desc.head()
+        # print df_desc.describe()
+        # plot_xy(df_desc, name, desc)
     '''
     big_df = pd.read_pickle('pauling_file_tags_ht.pkl')
     idxs = big_df.index.tolist()
@@ -400,4 +401,4 @@ if __name__ == '__main__':
         big_df.set_value(idx_coord[0], 'anion_coord', idx_coord[2])
     print big_df.describe()
     # '''
-    # plot_common_comp()
+    plot_common_comp()
