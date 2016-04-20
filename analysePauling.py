@@ -91,6 +91,54 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
         coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
 
 
+def test_set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
+    """
+    Sets temperature tags only based on the value of the field 'metadata._Springer.expdetails.temperature'
+    :param lt_highcutff: highest temperature for low temperature measurments
+    :param ht_lowcutoff: lowest temperature for high temperature measurement
+    :param doc: Pauling file record
+    :return:
+    """
+    coll = db['pauling_file_min_tags2']
+    title = doc['metadata']['_Springer']['title']
+    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
+    # Set pressure tags
+    if 'p =' in title:
+        try:
+            pressure_str = re.findall(r'p = (.*) GPa', title)[0]
+            pressure_val = float(re.sub('\(.*\)', '', pressure_str))
+            coll.update({'key': doc['key']}, {'$set': {'pressure (GPa)': pressure_val}})
+            if pressure_val > 0.00010132501:
+                coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
+            else:
+                coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+        except UnicodeEncodeError as e:
+            print e
+            print title
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+            # Not set to 'None' as there are only 3 ids (sd_1601567, sd_1601568, sd_1601569) that are
+            # unparsable and they are all < 1atm
+    else:
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+    # Set temperature tags
+    if 'temperature' in doc['metadata']['_Springer']['expdetails']:
+        exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
+        try:
+            temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
+            temp_val = float(re.sub('\(.*\)', '', temp_str))
+            if temp_val > ht_lowcutoff:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
+            elif temp_val < lt_highcutff:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
+            else:
+                coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+            coll.update({'key': doc['key']}, {'$set': {'temperature (K)': temp_val}})
+        except:
+            coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+    else:
+        coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
+
+
 def set_hpht_dataset_tags():
     tagcoll = db['pauling_file_min_tags1']
     # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
@@ -99,32 +147,36 @@ def set_hpht_dataset_tags():
     comps_hp_false = set()
     comps_ht_true = set()
     comps_ht_false = set()
-    comps_ids = defaultdict(list)
+    hpcomps_ids = defaultdict(list)
+    htcomps_ids = defaultdict(list)
     x = 0
     for doc in tagcoll.find().batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
-        composition = doc['metadata']['_structure']['reduced_cell_formula']
+        composition = doc['metadata']['_structure']['reduced_cell_formula_abc']
         if doc['is_hp'] is True and doc['is_ht'] in [False, None]:
             comps_hp_true.add(composition)
+            hpcomps_ids[composition].append(doc['key'])
         elif doc['is_hp'] is False and doc['is_ht'] in [False, None]:
             comps_hp_false.add(composition)
+            hpcomps_ids[composition].append(doc['key'])
         if doc['is_ht'] is True and doc['is_hp'] is False:
             comps_ht_true.add(composition)
+            htcomps_ids[composition].append(doc['key'])
         elif doc['is_ht'] is False and doc['is_hp'] is False:
             comps_ht_false.add(composition)
-        comps_ids[composition].append(doc['key'])
+            htcomps_ids[composition].append(doc['key'])
     hp_unique_comps = comps_hp_true.intersection(comps_hp_false)
     print len(hp_unique_comps)
     for comp in hp_unique_comps:
-        ids_toset = comps_ids[comp]
+        ids_toset = hpcomps_ids[comp]
         for id in ids_toset:
             tagcoll.update({'key': id}, {'$set': {'is_hp_dataset': True}})
     ht_unique_comps = comps_ht_true.intersection(comps_ht_false)
     print len(ht_unique_comps)
     for comp in ht_unique_comps:
-        ids_toset = comps_ids[comp]
+        ids_toset = htcomps_ids[comp]
         for id in ids_toset:
             # Remove docs with 'is_ht' = None ('null' in mongo)
             for doc in tagcoll.find({'key': id}):
@@ -371,8 +423,8 @@ if __name__ == '__main__':
             print x
         set_hpht_tags(doc, 350, 450)
     # '''
-    # set_hpht_dataset_tags()
-    props = ['hp', 'ht']
+    set_hpht_dataset_tags()
+    # props = ['hp', 'ht']
     # for name in props:
         # save_hpht(name)
         # grouped_df, merged_df = group_merge_df(name)
@@ -401,4 +453,4 @@ if __name__ == '__main__':
         big_df.set_value(idx_coord[0], 'anion_coord', idx_coord[2])
     print big_df.describe()
     # '''
-    plot_common_comp()
+    # plot_common_comp()
