@@ -47,26 +47,17 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
             pressure_val = float(re.sub('\(.*\)', '', pressure_str))
             coll.update({'key': doc['key']}, {'$set': {'pressure (GPa)': pressure_val}})
             if pressure_val > 0.00010132501:
-                hp_title = True
+                coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
             else:
-                hp_title = False
+                coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
         except UnicodeEncodeError as e:
             print e
             print title
-            hp_title = False  # Not set to 'None' as there are only 3 ids (sd_1601567, sd_1601568, sd_1601569) that are
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
+            # Not set to 'None' as there are only 3 ids (sd_1601567, sd_1601568, sd_1601569) that are
             # unparsable and they are all < 1atm
-    elif ' hp' in title:
-        hp_title = True
-    else:
-        hp_title = None
-    if ' hp' in phase:
-        hp_phase = True
-    else:
-        hp_phase = None
-    if hp_title is not None:
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
-    elif hp_phase is not None:
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_phase}})
+    elif ' hp' in title or ' hp' in phase:
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
     else:
         coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     # Set temperature tags
