@@ -41,6 +41,10 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
     title = doc['metadata']['_Springer']['title']
     phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
     # Set pressure tags
+    if doc['key'] in ['sd_1601567', 'sd_1601568',
+                      'sd_1601569']:  # These 3 ids (sd_1601567, sd_1601568, sd_1601569) have 'p =' in title but are
+        # unparsable and they are all < 1atm
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     if 'p =' in title:
         try:
             pressure_str = re.findall(r'p = (.*) GPa', title)[0]
@@ -53,9 +57,7 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
         except UnicodeEncodeError as e:
             print e
             print title
-            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-            # Not set to 'None' as there are only 3 ids (sd_1601567, sd_1601568, sd_1601569) that are
-            # unparsable and they are all < 1atm
+            coll.update({'key': doc['key']}, {'$set': {'is_hp': None}})
     elif ' hp' in title or ' hp' in phase:
         coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
     else:
@@ -127,7 +129,7 @@ def set_hpht_dataset_tags():
 
 def save_hpht(prop):
     tagcoll = db['pauling_file_min_tags1']
-    cursor = tagcoll.find({'is_'+ prop + '_dataset': True})
+    cursor = tagcoll.find({'is_' + prop + '_dataset': True})
     df = pd.DataFrame(list(cursor))
     df.to_pickle(prop + '.pkl')
 
@@ -365,19 +367,19 @@ if __name__ == '__main__':
     # set_hpht_dataset_tags()
     # props = ['hp', 'ht']
     # for name in props:
-        # save_hpht(name)
-        # grouped_df, merged_df = group_merge_df(name)
-        # print grouped_df.head(10)
-        # print grouped_df.describe()
-        # print merged_df
-        # plot_violin(grouped_df, name)
-        # plot_xy(merged_df, name)
-        # merged_df.to_pickle(name + '_merged.pkl')
-        # analyze_df(name)
-        # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
-        # print df_desc.head()
-        # print df_desc.describe()
-        # plot_xy(df_desc, name, desc)
+    # save_hpht(name)
+    # grouped_df, merged_df = group_merge_df(name)
+    # print grouped_df.head(10)
+    # print grouped_df.describe()
+    # print merged_df
+    # plot_violin(grouped_df, name)
+    # plot_xy(merged_df, name)
+    # merged_df.to_pickle(name + '_merged.pkl')
+    # analyze_df(name)
+    # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
+    # print df_desc.head()
+    # print df_desc.describe()
+    # plot_xy(df_desc, name, desc)
     '''
     big_df = pd.read_pickle('pauling_file_tags_ht.pkl')
     idxs = big_df.index.tolist()
