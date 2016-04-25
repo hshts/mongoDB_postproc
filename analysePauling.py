@@ -127,7 +127,7 @@ def set_hpht_dataset_tags():
 
 
 def save_hpht(prop):
-    tagcoll = db['pauling_file_min_tags1']
+    tagcoll = db['pauling_file_min_tags']
     cursor = tagcoll.find({'is_' + prop + '_dataset': True})
     df = pd.DataFrame(list(cursor))
     df.to_pickle(prop + '.pkl')
@@ -354,8 +354,8 @@ def plot_common_comp():
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    create_tagscoll()
-    # '''
+    # create_tagscoll()
+    '''
     x = 0
     for doc in db['pauling_file_min_tags'].find().batch_size(75):
         x += 1
@@ -363,22 +363,22 @@ if __name__ == '__main__':
             print x
         set_hpht_tags(doc, 350, 450)
     # '''
-    set_hpht_dataset_tags()
+    # set_hpht_dataset_tags()
     # props = ['hp', 'ht']
     # for name in props:
-    # save_hpht(name)
-    # grouped_df, merged_df = group_merge_df(name)
-    # print grouped_df.head(10)
-    # print grouped_df.describe()
-    # print merged_df
-    # plot_violin(grouped_df, name)
-    # plot_xy(merged_df, name)
-    # merged_df.to_pickle(name + '_merged.pkl')
-    # analyze_df(name)
-    # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
-    # print df_desc.head()
-    # print df_desc.describe()
-    # plot_xy(df_desc, name, desc)
+        # save_hpht(name)
+        # grouped_df, merged_df = group_merge_df(name)
+        # print grouped_df.head(10)
+        # print grouped_df.describe()
+        # print merged_df
+        # plot_violin(grouped_df, name)
+        # plot_xy(merged_df, name)
+        # merged_df.to_pickle(name + '_merged.pkl')
+        # analyze_df(name)
+        # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
+        # print df_desc.head()
+        # print df_desc.describe()
+        # plot_xy(df_desc, name, desc)
     '''
     big_df = pd.read_pickle('pauling_file_tags_ht.pkl')
     idxs = big_df.index.tolist()
