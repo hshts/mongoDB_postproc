@@ -55,9 +55,8 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
             else:
                 coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
         except UnicodeEncodeError as e:
-            print e
-            print title
             coll.update({'key': doc['key']}, {'$set': {'is_hp': None}})
+            raise UnicodeEncodeError
     elif ' hp' in title or ' hp' in phase:
         coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
     else:
