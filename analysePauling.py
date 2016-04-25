@@ -63,61 +63,10 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
         hp_phase = True
     else:
         hp_phase = None
-    if hp_title == hp_phase:
-        if hp_title is not None:
-            coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
-        else:
-            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-    elif hp_title is False:
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-    else:
-        coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
-    # Set temperature tags
-    if 'temperature' in doc['metadata']['_Springer']['expdetails']:
-        exp_t = doc['metadata']['_Springer']['expdetails']['temperature']
-        try:
-            temp_str = re.findall(r'T\s*=\s*(.*)\s*K', exp_t)[0]
-            temp_val = float(re.sub('\(.*\)', '', temp_str))
-            if temp_val > ht_lowcutoff:
-                coll.update({'key': doc['key']}, {'$set': {'is_ht': True}})
-            elif temp_val < lt_highcutff:
-                coll.update({'key': doc['key']}, {'$set': {'is_ht': False}})
-            else:
-                coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-            coll.update({'key': doc['key']}, {'$set': {'temperature (K)': temp_val}})
-        except:
-            coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-    else:
-        coll.update({'key': doc['key']}, {'$set': {'is_ht': None}})
-
-
-def test_set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
-    """
-    Sets temperature tags only based on the value of the field 'metadata._Springer.expdetails.temperature'
-    :param lt_highcutff: highest temperature for low temperature measurments
-    :param ht_lowcutoff: lowest temperature for high temperature measurement
-    :param doc: Pauling file record
-    :return:
-    """
-    coll = db['pauling_file_min_tags2']
-    title = doc['metadata']['_Springer']['title']
-    phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
-    # Set pressure tags
-    if 'p =' in title:
-        try:
-            pressure_str = re.findall(r'p = (.*) GPa', title)[0]
-            pressure_val = float(re.sub('\(.*\)', '', pressure_str))
-            coll.update({'key': doc['key']}, {'$set': {'pressure (GPa)': pressure_val}})
-            if pressure_val > 0.00010132501:
-                coll.update({'key': doc['key']}, {'$set': {'is_hp': True}})
-            else:
-                coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-        except UnicodeEncodeError as e:
-            print e
-            print title
-            coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-            # Not set to 'None' as there are only 3 ids (sd_1601567, sd_1601568, sd_1601569) that are
-            # unparsable and they are all < 1atm
+    if hp_title is not None:
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_title}})
+    elif hp_phase is not None:
+        coll.update({'key': doc['key']}, {'$set': {'is_hp': hp_phase}})
     else:
         coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
     # Set temperature tags
@@ -195,26 +144,27 @@ def save_hpht(prop):
 def group_merge_df(prop):
     df = pd.read_pickle(prop + '.pkl')
     for i, row in df.iterrows():
-        if row['metadata']['_structure']['is_valid']:
-            df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
-            try:
-                df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
-            except:
-                df.set_value(i, 'space_group', None)
-            try:
-                df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
-            except IndexError as e:
-                df.set_value(i, 'density', None)
-            structure = Structure.from_dict(row['structure'])
-            composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
-            num_density = len(composition.get_el_amt_dict()) / structure.volume
-            df.set_value(i, 'number_density', num_density)
+        df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
+        try:
+            df.set_value(i, 'space_group', int(row['metadata']['_Springer']['geninfo']['Space Group']))
+        except:
+            df.set_value(i, 'space_group', None)
+        try:
+            df.set_value(i, 'density', float(row['metadata']['_Springer']['geninfo']['Density'].split()[2]))
+        except IndexError as e:
+            df.set_value(i, 'density', None)
+        structure = Structure.from_dict(row['structure'])
+        composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
+        num_density = len(composition.get_el_amt_dict()) / structure.volume
+        df.set_value(i, 'number_density', num_density)
         if row['metadata']['_structure']['is_ordered']:
             df.set_value(i, 'is_ordered', 1)
         else:
             df.set_value(i, 'is_ordered', 0)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
+    print df_2nd_groupby.head()
+    print df_2nd_groupby.describe()
     df_groupby_false = pd.DataFrame
     df_groupby_true = pd.DataFrame
     for name, group in df_2nd_groupby:
@@ -399,17 +349,15 @@ def get_coordination(idx_struct):
 
 def plot_common_comp():
     hp_df = pd.read_pickle('hp_merged.pkl')
-    print hp_df.head()
     ht_df = pd.read_pickle('ht_merged.pkl')
-    print ht_df.head()
     hpht_df = pd.merge(hp_df, ht_df, on='reduced_cell_formula')
     for i, row in hpht_df.iterrows():
         hpht_df.set_value(i, 'sg_diff_hp', row['space_group_y_x'] - row['space_group_x_x'])
         hpht_df.set_value(i, 'sg_diff_ht', row['space_group_y_y'] - row['space_group_x_y'])
     # print hpht_df
     hpht_df.plot(x='sg_diff_ht', y='sg_diff_hp', kind='scatter')
-    plt.show()
-    print hpht_df.sort(['sg_diff_hp', 'sg_diff_ht'])
+    # plt.show()
+    print hpht_df.sort_values(['sg_diff_ht', 'sg_diff_hp'], ascending=[False, True])
 
 
 if __name__ == '__main__':
@@ -423,15 +371,14 @@ if __name__ == '__main__':
             print x
         set_hpht_tags(doc, 350, 450)
     # '''
-    set_hpht_dataset_tags()
+    # set_hpht_dataset_tags()
     # props = ['hp', 'ht']
     # for name in props:
         # save_hpht(name)
         # grouped_df, merged_df = group_merge_df(name)
         # print grouped_df.head(10)
         # print grouped_df.describe()
-        # print merged_df.head(10)
-        # print merged_df.describe()
+        # print merged_df
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
         # merged_df.to_pickle(name + '_merged.pkl')
@@ -453,4 +400,4 @@ if __name__ == '__main__':
         big_df.set_value(idx_coord[0], 'anion_coord', idx_coord[2])
     print big_df.describe()
     # '''
-    # plot_common_comp()
+    plot_common_comp()
