@@ -16,7 +16,7 @@ mpr = MPRester()
 
 def create_tagscoll():
     coll = db['pauling_file']
-    min_tags_collname = 'pauling_file_min_tags1'
+    min_tags_collname = 'pauling_file_min_tags'
     db[min_tags_collname].drop()
     coll.aggregate([{'$match': {'structure': {'$exists': True}, 'metadata._structure.is_valid': True}},
                     {'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': min_tags_collname}])
@@ -37,7 +37,7 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
     :param doc: Pauling file record
     :return:
     """
-    coll = db['pauling_file_min_tags1']
+    coll = db['pauling_file_min_tags']
     title = doc['metadata']['_Springer']['title']
     phase = doc['metadata']['_Springer']['geninfo']['Phase Label(s)']
     # Set pressure tags
@@ -45,7 +45,7 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
                       'sd_1601569']:  # These 3 ids (sd_1601567, sd_1601568, sd_1601569) have 'p =' in title but are
         # unparsable and they are all < 1atm
         coll.update({'key': doc['key']}, {'$set': {'is_hp': False}})
-    if 'p =' in title:
+    elif 'p =' in title:
         try:
             pressure_str = re.findall(r'p = (.*) GPa', title)[0]
             pressure_val = float(re.sub('\(.*\)', '', pressure_str))
@@ -81,7 +81,7 @@ def set_hpht_tags(doc, lt_highcutff, ht_lowcutoff):
 
 
 def set_hpht_dataset_tags():
-    tagcoll = db['pauling_file_min_tags1']
+    tagcoll = db['pauling_file_min_tags']
     # Initialize the tags 'is_hp_dataset' and 'is_ht_dataset'
     tagcoll.update({}, {'$set': {'is_hp_dataset': False, 'is_ht_dataset': False}}, multi=True)
     comps_hp_true = set()
@@ -354,16 +354,16 @@ def plot_common_comp():
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    # create_tagscoll()
-    '''
+    create_tagscoll()
+    # '''
     x = 0
-    for doc in db['pauling_file_min_tags1'].find().batch_size(75):
+    for doc in db['pauling_file_min_tags'].find().batch_size(75):
         x += 1
         if x % 1000 == 0:
             print x
         set_hpht_tags(doc, 350, 450)
     # '''
-    # set_hpht_dataset_tags()
+    set_hpht_dataset_tags()
     # props = ['hp', 'ht']
     # for name in props:
     # save_hpht(name)
@@ -392,4 +392,4 @@ if __name__ == '__main__':
         big_df.set_value(idx_coord[0], 'anion_coord', idx_coord[2])
     print big_df.describe()
     # '''
-    plot_common_comp()
+    # plot_common_comp()
