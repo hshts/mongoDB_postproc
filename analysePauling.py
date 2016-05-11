@@ -18,7 +18,8 @@ def create_tagscoll():
     coll = db['pauling_file']
     min_tags_collname = 'pauling_file_min_tags'
     db[min_tags_collname].drop()
-    coll.aggregate([{'$match': {'structure': {'$exists': True}, 'metadata._structure.is_valid': True}},
+    coll.aggregate([{'$match': {'structure': {'$exists': True}, 'metadata._structure.is_valid': True,
+                     'errors': {'$nin': ['structural composition and refined/alphabetic formula do not match']}}},
                     {'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': min_tags_collname}])
     db[min_tags_collname].create_index([('key', pymongo.ASCENDING)], unique=True)
     # Remove Deuterium
@@ -155,8 +156,6 @@ def group_merge_df(prop):
             df.set_value(i, 'is_ordered', 0)
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
-    print df_2nd_groupby.head()
-    print df_2nd_groupby.describe()
     df_groupby_false = pd.DataFrame
     df_groupby_true = pd.DataFrame
     for name, group in df_2nd_groupby:
@@ -208,7 +207,7 @@ def plot_xy(df, propname, descriptor=None):
 # TODO: Check how to set legends in plots (return them here and pass them onto plot_xy()
 class AddDescriptor:
     def __init__(self, propname):
-        self.df = pd.read_pickle(propname + '.pkl')
+        self.df = pd.read_pickle(propname + '_merged.pkl')
         self.descriptor = ''
 
     def X(self):
@@ -348,7 +347,7 @@ def plot_common_comp():
         hpht_df.set_value(i, 'sg_diff_ht', row['space_group_y_y'] - row['space_group_x_y'])
     # print hpht_df
     hpht_df.plot(x='sg_diff_ht', y='sg_diff_hp', kind='scatter')
-    # plt.show()
+    plt.show()
     print hpht_df.sort_values(['sg_diff_ht', 'sg_diff_hp'], ascending=[False, True])
 
 
@@ -364,21 +363,18 @@ if __name__ == '__main__':
         set_hpht_tags(doc, 350, 450)
     # '''
     # set_hpht_dataset_tags()
-    # props = ['hp', 'ht']
-    # for name in props:
+    props = ['hp', 'ht']
+    for name in props:
         # save_hpht(name)
         # grouped_df, merged_df = group_merge_df(name)
-        # print grouped_df.head(10)
-        # print grouped_df.describe()
-        # print merged_df
         # plot_violin(grouped_df, name)
         # plot_xy(merged_df, name)
         # merged_df.to_pickle(name + '_merged.pkl')
         # analyze_df(name)
-        # df_desc, desc = getattr(AddDescriptor(name), 'coordination')()
-        # print df_desc.head()
-        # print df_desc.describe()
-        # plot_xy(df_desc, name, desc)
+        plot_descs = ['X', 'is_magnetic', 'is_ordered']
+        for plot_desc in plot_descs:
+            df_desc, desc = getattr(AddDescriptor(name), plot_desc)()
+            plot_xy(df_desc, name, desc)
     '''
     big_df = pd.read_pickle('pauling_file_tags_ht.pkl')
     idxs = big_df.index.tolist()
