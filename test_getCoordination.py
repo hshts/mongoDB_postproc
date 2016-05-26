@@ -1,15 +1,15 @@
 import unittest
-from getcoordination import getcoordination, get_mode_specie_sites
+from getcoordination import getcoordination, get_mode_specie_sites, get_mean_specie_sites
 from pymatgen import Structure
 
 
 class Testgetcoordination(unittest.TestCase):
     def test_Al(self):
-        self.assertEqual(get_mode_specie_sites(
+        self.assertEqual(get_mean_specie_sites(
             getcoordination(Structure.from_file('test_structures/Al_mp-134_conventional_standard.cif'))), {'Al': 12})
 
     def test_Cu(self):
-        self.assertEqual(get_mode_specie_sites(
+        self.assertEqual(get_mean_specie_sites(
             getcoordination(Structure.from_file('test_structures/Cu_mp-30_conventional_standard.cif'))), {'Cu': 12})
 
     def test_Li(self):
@@ -29,7 +29,7 @@ class Testgetcoordination(unittest.TestCase):
             getcoordination(Structure.from_file('test_structures/Zr_mp-131_conventional_standard.cif'))), {'Zr': 12})
 
     def test_Li2O(self):
-        self.assertEqual(get_mode_specie_sites(
+        self.assertEqual(get_mean_specie_sites(
             getcoordination(Structure.from_file('test_structures/Li2O_mp-1960_conventional_standard.cif'))),
                          {'Li': 4, 'O': 8})
 
@@ -59,7 +59,7 @@ class Testgetcoordination(unittest.TestCase):
                          {'Co': 6, 'Sb': 4})
 
     def test_Co2NiGa(self):
-        self.assertEqual(get_mode_specie_sites(
+        self.assertEqual(get_mean_specie_sites(
             getcoordination(Structure.from_file('test_structures/GaCo2Ni_mp-20551_conventional_standard.cif'))),
                          {'Co': 12, 'Ga': 12, 'Ni': 12})
 
@@ -77,6 +77,11 @@ class Testgetcoordination(unittest.TestCase):
         self.assertEqual(get_mode_specie_sites(
             getcoordination(Structure.from_file('test_structures/CaF2_mp-2741_conventional_standard.cif'))),
                          {'Ca': 8, 'F': 4})
+
+    def test_Fe(self):
+        self.assertEqual(get_mode_specie_sites(
+            getcoordination(Structure.from_file('test_structures/Fe.cif'))), {'Fe': 8})
+
 
 
 if __name__ == '__main__':
