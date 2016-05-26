@@ -1,13 +1,15 @@
-import pymongo
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from pymatgen import Structure
-from getcoordination import getcoordination, get_mean_specie_sites
-from matminer.descriptors.composition_features import *
-from pymatgen.matproj.rest import MPRester
-from collections import defaultdict
 import re
+from collections import defaultdict
+import matplotlib.pyplot as plt
+import pandas as pd
+import pymongo
+import seaborn as sns
+from pandas.io import json
+from pymatgen import Structure
+from pymatgen.matproj.rest import MPRester
+from getcoordination import VoronoiCoordFinder_edited, get_avg_cns, get_cation_weighted_avg, EffectiveCoordFinder
+from matminer.descriptors.composition_features import *
+from tina_cn_code.okeeffe_CN import get_avg_cn as okeeffe_get_avg_cn
 
 client = pymongo.MongoClient()
 db = client.springer
@@ -19,7 +21,8 @@ def create_tagscoll():
     min_tags_collname = 'pauling_file_min_tags'
     db[min_tags_collname].drop()
     coll.aggregate([{'$match': {'structure': {'$exists': True}, 'metadata._structure.is_valid': True,
-                     'errors': {'$nin': ['structural composition and refined/alphabetic formula do not match']}}},
+                                'errors': {
+                                    '$nin': ['structural composition and refined/alphabetic formula do not match']}}},
                     {'$project': {'key': 1, 'metadata': 1, 'structure': 1}}, {'$out': min_tags_collname}])
     db[min_tags_collname].create_index([('key', pymongo.ASCENDING)], unique=True)
     # Remove Deuterium
@@ -127,15 +130,7 @@ def set_hpht_dataset_tags():
                     tagcoll.update({'key': id}, {'$set': {'is_ht_dataset': True}})
 
 
-def save_hpht(prop):
-    tagcoll = db['pauling_file_min_tags']
-    cursor = tagcoll.find({'is_' + prop + '_dataset': True})
-    df = pd.DataFrame(list(cursor))
-    df.to_pickle(prop + '.pkl')
-
-
-def group_merge_df(prop):
-    df = pd.read_pickle(prop + '.pkl')
+def add_features(df):
     for i, row in df.iterrows():
         df.set_value(i, 'reduced_cell_formula', row['metadata']['_structure']['reduced_cell_formula'])
         try:
@@ -147,13 +142,53 @@ def group_merge_df(prop):
         except IndexError as e:
             df.set_value(i, 'density', None)
         structure = Structure.from_dict(row['structure'])
-        composition = Composition(row['metadata']['_structure']['reduced_cell_formula'])
-        num_density = len(composition.get_el_amt_dict()) / structure.volume
+        composition = Composition(structure.composition)
+        num_density = (composition.num_atoms/structure.volume)
         df.set_value(i, 'number_density', num_density)
+        num_vol = (1/num_density)
+        df.set_value(i, 'number_volume', num_vol)
         if row['metadata']['_structure']['is_ordered']:
             df.set_value(i, 'is_ordered', 1)
         else:
             df.set_value(i, 'is_ordered', 0)
+    return df
+
+
+def set_coordination(df):
+    for i, row in df.iterrows():
+        if i % 10 == 0:
+            print i
+        struc = Structure.from_dict(row['structure'])
+        # using own edited Voronoi algorithm
+        try:
+            specie_meancoord = get_avg_cns(VoronoiCoordFinder_edited(struc).get_cns())
+        except Exception as e:
+            print e
+            continue
+        df.set_value(i, 'VoronoiEd_cn', json.dumps(specie_meancoord))
+        df.set_value(i, 'Voronoi_cation_avgcn', get_cation_weighted_avg(specie_meancoord, struc))
+        # using own Effective coordination algorithm
+        try:
+            specie_meaneffcoord = get_avg_cns(EffectiveCoordFinder(struc).get_cns())
+        except Exception as e:
+            print e
+            continue
+        df.set_value(i, 'eff_cn', json.dumps(specie_meaneffcoord))
+        df.set_value(i, 'eff_cation_avgcn', get_cation_weighted_avg(specie_meaneffcoord, struc))
+        # using Tina's O'Keeffe coordination algorithm
+        if row['metadata']['_structure']['is_ordered']:
+            try:
+                okeeffe_coord = okeeffe_get_avg_cn(struc)
+            except Exception as e:
+                print e
+                continue
+            df.set_value(i, 'okeeffe_cn', json.dumps(okeeffe_coord))
+            df.set_value(i, 'okeeffe_cn_avg', get_cation_weighted_avg(okeeffe_coord, struc))
+    return df
+
+
+def group_merge_df(prop):
+    df = pd.read_pickle(prop + '_cn.pkl')
     df_groupby = df.groupby(['reduced_cell_formula', 'is_' + prop], as_index=False).mean()
     df_2nd_groupby = df_groupby.groupby('is_' + prop, as_index=False)
     df_groupby_false = pd.DataFrame
@@ -163,12 +198,13 @@ def group_merge_df(prop):
             df_groupby_false = group
         elif name:
             df_groupby_true = group
-    df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula')
+    df_merge = pd.merge(df_groupby_false, df_groupby_true, on='reduced_cell_formula',
+                        suffixes=('_l' + prop[-1], '_h' + prop[-1]))
     return df_groupby, df_merge
 
 
 def plot_violin(df, propname):
-    plot_props = ['density', 'space_group', 'number_density']
+    plot_props = ['space_group', 'density', 'number_density', 'number_volume']
     for pro in plot_props:
         sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
                        split=True)
@@ -176,7 +212,7 @@ def plot_violin(df, propname):
 
 
 def plot_xy(df, propname, descriptor=None):
-    plot_props = ['density', 'space_group', 'number_density']
+    plot_props = ['space_group', 'density', 'number_density', 'number_volume']
     for pro in plot_props:
         # fig, ax = plt.subplots()
         # for k, v in df.iterrows():
@@ -188,10 +224,10 @@ def plot_xy(df, propname, descriptor=None):
         # if (abs(v[pro + '_y'] - v[pro + '_x'])) / v[pro + '_x'] > label_cutoff:
         #     ax.text(v[pro + '_x'], v[pro + '_y'], v['composition'])
         if descriptor is None:
-            df.plot(x=pro + '_x', y=pro + '_y', kind='scatter')
+            df.plot(x=pro + '_l' + propname[-1], y=pro + '_h' + propname[-1], kind='scatter')
         else:
             color_column = df[descriptor]
-            df.plot(x=pro + '_x', y=pro + '_y', kind='scatter', c=color_column)
+            df.plot(x=pro + '_l' + propname[-1], y=pro + '_h' + propname[-1], kind='scatter', c=color_column)
         plt.xlabel(pro + ' of ground states')
         plt.ylabel(pro + ' of excited states')
         if propname == 'hp':
@@ -207,7 +243,7 @@ def plot_xy(df, propname, descriptor=None):
 # TODO: Check how to set legends in plots (return them here and pass them onto plot_xy()
 class AddDescriptor:
     def __init__(self, propname):
-        self.df = pd.read_pickle(propname + '_merged.pkl')
+        self.df = pd.read_pickle(propname + '_NEWF_merged.pkl')
         self.descriptor = ''
 
     def X(self):
@@ -265,7 +301,7 @@ class AddDescriptor:
     def is_ordered(self):
         self.descriptor = 'col_ord'
         for i, row in self.df.iterrows():
-            if row['is_ordered_x'] == row['is_ordered_y']:
+            if row['is_ordered_l'] == row['is_ordered_y']:
                 if row['is_ordered_x'] == 1:
                     self.df.loc[i, 'col_ord'] = 'b'
                 elif row['is_ordered_x'] == 0:
@@ -282,60 +318,46 @@ class AddDescriptor:
     def coordination(self):
         self.descriptor = 'col_coord'
         for i, row in self.df.iterrows():
-            print getcoordination(row['structure'])
+            try:
+                if 2 < row['okeeffe_cn_avg'] < 4:
+                    self.df.loc[i, 'col_coord'] = 'y'
+                elif 4 <= row['okeeffe_cn_avg'] < 6:
+                    self.df.loc[i, 'col_coord'] = 'g'
+                elif 6 <= row['okeeffe_cn_avg'] < 8:
+                    self.df.loc[i, 'col_coord'] = 'b'
+                elif 8 <= row['okeeffe_cn_avg'] < 10:
+                    self.df.loc[i, 'col_coord'] = 'r'
+                elif 10 <= row['okeeffe_cn_avg'] < 12:
+                    self.df.loc[i, 'col_coord'] = 'c'
+                else:
+                    self.df.loc[i, 'col_coord'] = 'k'
+            except KeyError:
+                self.df.loc[i, 'col_coord'] = 'k'
         return self.df, self.descriptor
 
 
 def analyze_df(prop):
-    df = pd.read_pickle(prop + '.pkl')
+    df = pd.read_pickle(prop + '_merged.pkl')
     for i, row in df.iterrows():
-        df.set_value(i, 'sg_diff', row['space_group_y'] - row['space_group_x'])
+        df.set_value(i, 'sg_diff', row['space_group_h' + prop[-1]] - row['space_group_l' + prop[-1]])
+        try:
+            composition = Composition(row['reduced_cell_formula'])
+            df.set_value(i, 'numden_diff', row['number_density_h' + prop[-1]] - row['number_density_l' + prop[-1]])
+            df.set_value(i, 'numvol_diff', ((len(composition.get_el_amt_dict()) * composition.weight)/(row['number_density_h' + prop[-1]])) - ((len(composition.get_el_amt_dict()) * composition.weight)/(row['number_density_l' + prop[-1]])))
+            df.set_value(i, 'den_diff', row['density_h' + prop[-1]] - row['density_l' + prop[-1]])
+            df.set_value(i, 'vol_diff', (composition.weight/(row['density_h' + prop[-1]])) - (composition.weight/(row['density_l' + prop[-1]])))
+        except ZeroDivisionError:
+            pass
+    df.plot(x='vol_diff', y='sg_diff', kind='scatter')
+    print df.sort_values('sg_diff').tail(50)
+    if prop == 'hp':
+        plt.title('HP')
+    elif prop == 'ht':
+        plt.title('HT')
+    plt.show()
     # print df.loc[df['reduced_cell_formula'] == 'Fe']
-    print df.sort_values('sg_diff').dropna().head(50)
     # print df.loc[(60 < df['space_group_x']) & (df['space_group_x'] < 65)]
     # print df.sort_values('number_density_y').dropna().tail(60)
-
-
-def get_coordination(idx_struct):
-    specie_meancoord = get_mean_specie_sites(getcoordination(Structure.from_dict(idx_struct[1])))
-    el_amt = Structure.from_dict(idx_struct[1]).composition.get_el_amt_dict()
-    cations = []
-    anions = []
-    X_cutoff = 2.5
-    for el in el_amt:
-        if Element(el).X < X_cutoff:
-            cations.append(el)
-        else:
-            anions.append(el)
-    total_cation_coords = 0
-    total_cation_amts = 0
-    for cation in cations:
-        try:
-            total_cation_coords += (el_amt[cation] * specie_meancoord[cation])
-        except KeyError:
-            for sp in specie_meancoord:
-                if cation in sp:
-                    cation_key = sp
-                    break
-            total_cation_coords += (el_amt[cation] * specie_meancoord[cation_key])
-        total_cation_amts += el_amt[cation]
-    cations_weighted_coord = total_cation_coords / total_cation_amts
-    total_anion_coords = 0
-    total_anion_amts = 0
-    for anion in anions:
-        try:
-            total_anion_coords += (el_amt[anion] * specie_meancoord[anion])
-        except KeyError:
-            for sp in specie_meancoord:
-                if anion in sp:
-                    anion_key = sp
-                    break
-            total_anion_coords += (el_amt[anion] * specie_meancoord[anion_key])
-        total_anion_amts += el_amt[anion]
-    anions_weighted_coord = total_anion_coords / total_anion_amts
-    print cations_weighted_coord, anions_weighted_coord
-    print '----------'
-    return idx_struct[0], cations_weighted_coord, anions_weighted_coord
 
 
 def plot_common_comp():
@@ -365,16 +387,21 @@ if __name__ == '__main__':
     # set_hpht_dataset_tags()
     props = ['hp', 'ht']
     for name in props:
-        # save_hpht(name)
-        # grouped_df, merged_df = group_merge_df(name)
-        # plot_violin(grouped_df, name)
-        # plot_xy(merged_df, name)
-        # merged_df.to_pickle(name + '_merged.pkl')
+        # cursor = db['pauling_file_min_tags'].find({'is_' + name + '_dataset': True})
+        # df = pd.DataFrame(list(cursor))
+        # df_feat = add_features(df)
+        # df_feat.to_pickle(name + '_feat.pkl')
+        # df_cn = set_coordination(df_feat)
+        # df_cn.to_pickle(name + '_cn.pkl')
+        grouped_df, merged_df = group_merge_df(name)
+        # merged_df.to_pickle(name + '_cn_merged.pkl')
+        plot_violin(grouped_df, name)
+        plot_xy(merged_df, name)
         # analyze_df(name)
-        plot_descs = ['X', 'is_magnetic', 'is_ordered']
-        for plot_desc in plot_descs:
-            df_desc, desc = getattr(AddDescriptor(name), plot_desc)()
-            plot_xy(df_desc, name, desc)
+        # plot_descs = ['coordination']
+        # for plot_desc in plot_descs:
+        #     df_desc, desc = getattr(AddDescriptor(name), plot_desc)()
+        #     plot_xy(df_desc, name, desc)
     '''
     big_df = pd.read_pickle('pauling_file_tags_ht.pkl')
     idxs = big_df.index.tolist()
@@ -389,3 +416,4 @@ if __name__ == '__main__':
     print big_df.describe()
     # '''
     # plot_common_comp()
+
