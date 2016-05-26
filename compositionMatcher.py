@@ -23,10 +23,10 @@ def get_meta_from_structure(structure):
             'anonymized_formula': comp.anonymized_formula,
             'chemsystem': '-'.join(elsyms),
             'is_ordered': structure.is_ordered,
-            'is_valid': structure.is_valid()}
+            'is_valid': structure.is_valid(tol=0.50)}
     return meta
 
-
+# ID's to verify: 'sd_0541484', 'sd_0457328'
 if __name__ == '__main__':
     x = 0
     y = 0
@@ -36,6 +36,8 @@ if __name__ == '__main__':
     c = 0
     keys = []
     for doc in db['pauling_file_min_tags'].find().batch_size(75):
+        if doc['key'] in ['sd_1301665', 'sd_0456987', 'sd_1125437', 'sd_1125436', 'sd_1500010']:
+            continue
         x += 1
         if x % 1000 == 0:
             print x
@@ -52,19 +54,20 @@ if __name__ == '__main__':
             y += 1
             continue
         alphaform_comp = Composition(redform).alphabetical_formula
-        # alphaform_comp_int = Composition(alphaform_comp).get_integer_formula_and_factor()[0]
         alphaform_frac = Composition(alphaform_comp).fractional_composition
         structure_comp = doc['metadata']['_structure']['reduced_cell_formula_abc']
-        # structure_comp_int = Composition(structure_comp).get_integer_formula_and_factor()[0]
         structure_frac = Composition(structure_comp).fractional_composition
-        if alphaform_frac != structure_frac and not alphaform_frac.almost_equals(structure_frac, 0.25):
+        if alphaform_frac != structure_frac and not alphaform_frac.almost_equals(structure_frac, 0.15):
             for document in db['pauling_file'].find({'key': doc['key']}):
-                struct_lst = CifParser.from_string(document['cif_string']).get_structures()
+                try:
+                    struct_lst = CifParser.from_string(document['cif_string']).get_structures()
+                except:
+                    pass
                 if len(struct_lst) > 1:
                     matched = False
                     for struct in struct_lst[1:]:
                         another_frac = Composition(struct.composition).fractional_composition
-                        if alphaform_frac == another_frac or alphaform_frac.almost_equals(another_frac, 0.25):
+                        if alphaform_frac == another_frac or alphaform_frac.almost_equals(another_frac, 0.15):
                             matched = True
                             # '''
                             db['pauling_file'].update({'key': doc['key']}, {'$set': {'structure': struct.as_dict()}})
