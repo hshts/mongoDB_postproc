@@ -26,7 +26,7 @@ def get_meta_from_structure(structure):
             'is_valid': structure.is_valid(tol=0.50)}
     return meta
 
-# ID's to verify: 'sd_0541484', 'sd_0457328'
+# ID's that are incorrect: 'sd_0541484', 'sd_0457328'
 if __name__ == '__main__':
     x = 0
     y = 0
