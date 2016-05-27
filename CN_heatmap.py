@@ -1,7 +1,6 @@
 import pymongo
 import pandas as pd
 from pandas.io import json
-from pymatgen import Structure, Composition
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -15,8 +14,8 @@ if __name__ == '__main__':
     elements = ['Li', 'Na', 'Mg', 'K', 'Ca', 'Al', 'Si']
     for cn in cns:
         for prop in props:
-            big_df = pd.read_pickle(prop + '-O.pkl')
-            '''
+            # big_df = pd.read_pickle(prop + '-O.pkl')
+            # '''
             print '-------------------'
             big_df = pd.DataFrame()
             for el in elements:
@@ -55,8 +54,7 @@ if __name__ == '__main__':
                 big_df.columns = ['Low pressure', 'High pressure']
             else:
                 big_df.columns = ['Low temperature', 'High temperature']
-            big_df.to_pickle(prop + '-O_' + cn + '.pkl')
-            '''
+            # big_df.to_pickle(prop + '-O_' + cn + '.pkl')
             print big_df
             sns.set(font_scale=2)
             sns.heatmap(big_df)
@@ -75,24 +73,3 @@ if __name__ == '__main__':
                 plt.ylabel('Bonds', fontsize=28)
                 plt.title('Average ' + name + ' coordination number', fontsize=28)
             plt.show()
-            # '''
-            '''
-                if prop == 'hp':
-                    bins = [2, 4, 6, 8, 10, 12]
-                    df_groupby['cn_bucket'] = pd.cut(df_groupby[el + '_cn'], bins=bins)
-                    newdf = df_groupby[['is_hp', 'cn_bucket', el + '_cn']].groupby(['is_hp', 'cn_bucket']).count()
-                    big_df = pd.concat([big_df, newdf], axis=1)
-                    print big_df
-                else:
-                    bins = [2, 4, 6, 8, 10, 12]
-                    df_groupby['cn_bucket'] = pd.cut(df_groupby[el + '_cn'], bins=bins)
-                    newdf = df_groupby[['is_ht', 'cn_bucket', el + '_cn']].groupby(['is_ht', 'cn_bucket']).count()
-                    big_df = pd.concat([big_df, newdf], axis=1)
-                    print big_df
-            print big_df
-            # big_df.plot.bar(width=0.8)
-            # plt.ylabel('Number of compounds')
-            # plt.title(prop + '/ambient conditions: number of M-O compounds in different ranges of coordination numbers')
-            # plt.show()
-            '''
-
