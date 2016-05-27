@@ -1,7 +1,9 @@
 import pymongo
+from pymatgen import Structure, MPRester
 from pymatgen.analysis.structure_analyzer import VoronoiCoordFinder
 from collections import defaultdict
 import numpy as np
+from pymatgen.io.cif import CifParser
 from scipy.stats import mode
 import math
 import re
@@ -95,19 +97,6 @@ class VoronoiCoordFinder_edited(object):
         return species_coord_dictlst
 
 
-def calculate_bond_weight(bond_lth, avg):
-    """
-    Get the weight of a given bond (defined by the effective coordination number formula in Hoppe, 1979) in a polyhedra
-
-    :param bond_lth: (float) target bond length
-    :param avg: (float) weighted average bond length calculated by the method 'calculate_weighted_avg'
-    :return: (float) the bond's weight
-    """
-
-    weight = math.exp(1-(bond_lth/avg)**6)
-    return weight
-
-
 def calculate_weighted_avg(bonds):
     """
     Get the weighted average bond length given by the effective coordination number formula in Hoppe (1979)
@@ -145,7 +134,7 @@ class EffectiveCoordFinder(object):
     def __init__(self, structure):
         self._structure = structure
 
-    def get_cns(self, radius=3.0):
+    def get_cns(self, radius=10.0):
         """
         Get all specie-centered polyhedra for a structure
 
@@ -161,18 +150,13 @@ class EffectiveCoordFinder(object):
                 if neighbor[1] < radius:
                     all_bond_lengths.append(neighbor[1])
 
-            if len(all_bond_lengths) == 0:
-                continue
+            # if len(all_bond_lengths) == 0:
+            #     continue
             weighted_avg = calculate_weighted_avg(all_bond_lengths)
 
             for bond in all_bond_lengths:
-                bond_weight = calculate_bond_weight(bond, weighted_avg)
-                if bond_weight > 10e-5:
-                    bond_weights.append(bond_weight)
+                bond_weight = math.exp(1-(bond/weighted_avg)**6)
+                bond_weights.append(round(bond_weight, 3))
 
-            if site.species_string not in sp_cns.keys():
-                sp_cns[site.species_string] = [sum(bond_weights)]
-            else:
-                sp_cns[site.species_string].append(sum(bond_weights))
+            sp_cns[site.species_string].append(sum(bond_weights))
         return sp_cns
-
