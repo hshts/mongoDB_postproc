@@ -9,7 +9,7 @@ db = client.springer
 
 if __name__ == '__main__':
     pd.set_option('display.width', 1000)
-    cns = ['VoronoiEd_cn', 'eff_cn', 'okeeffe_cn']
+    cns = ['eff_cn', 'VoronoiEd_cn', 'okeeffe_cn']
     props = ['hp', 'ht']
     elements = ['Li', 'Na', 'Mg', 'K', 'Ca', 'Al', 'Si']
     for cn in cns:
@@ -56,8 +56,8 @@ if __name__ == '__main__':
                 big_df.columns = ['Low temperature', 'High temperature']
             # big_df.to_pickle(prop + '-O_' + cn + '.pkl')
             print big_df
-            sns.set(font_scale=2)
-            sns.heatmap(big_df)
+            sns.set(font_scale=4)
+            sns.heatmap(big_df, vmin=4, vmax=10)
             if cn == 'VoronoiEd_cn':
                 name = 'Voronoi'
             elif cn == 'eff_cn':
@@ -65,11 +65,12 @@ if __name__ == '__main__':
             else:
                 name = "O'Keeffe"
             if prop == 'hp':
-                plt.xlabel('Pressure (GPa)', fontsize=28)
-                plt.ylabel('Bonds', fontsize=28)
-                plt.title('Average ' + name + ' coordination number', fontsize=28)
+                plt.xlabel('Pressure (GPa)', fontsize=48)
+                plt.ylabel('Bonds', fontsize=48)
+                plt.title('Average ' + name + ' coordination number', fontsize=48)
             else:
-                plt.xlabel('Temperature (K)', fontsize=28)
-                plt.ylabel('Bonds', fontsize=28)
-                plt.title('Average ' + name + ' coordination number', fontsize=28)
+                plt.xlabel('Temperature (K)', fontsize=48)
+                plt.ylabel('Bonds', fontsize=48)
+                plt.title('Average ' + name + ' coordination number', fontsize=48)
+            plt.figure(figsize=(20,10))
             plt.show()
