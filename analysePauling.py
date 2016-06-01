@@ -169,7 +169,7 @@ def set_coordination(df):
         df.set_value(i, 'Voronoi_cation_avgcn', get_cation_weighted_avg(specie_meancoord, struc))
         # using own Effective coordination algorithm
         try:
-            specie_meaneffcoord = get_avg_cns(EffectiveCoordFinder(struc).get_cns())
+            specie_meaneffcoord = get_avg_cns(EffectiveCoordFinder(struc).get_cns(radius=10.0))
         except Exception as e:
             print e
             continue
@@ -204,10 +204,19 @@ def group_merge_df(prop):
 
 
 def plot_violin(df, propname):
-    plot_props = ['space_group', 'density', 'number_density', 'number_volume']
+    plot_props = ['space_group']
+    # plot_props = ['space_group', 'density', 'number_density', 'number_volume']
+    df['is_' + propname] = df['is_' + propname].map({True: 'HT', False: 'RT'})
     for pro in plot_props:
         sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
                        split=True)
+        if pro == 'space_group':
+            plt.xlabel('Number of compounds', fontsize=48)
+            plt.ylabel('Space Group', fontsize=48)
+            plt.title('Space group distribution of RT and HT compounds', fontsize=48)
+            plt.yticks(fontsize=48)
+            plt.ylim((-50, 300))
+            plt.legend(title='', fontsize=48)
         plt.show()
 
 
@@ -385,18 +394,17 @@ if __name__ == '__main__':
         set_hpht_tags(doc, 350, 450)
     # '''
     # set_hpht_dataset_tags()
-    props = ['hp', 'ht']
+    props = ['ht']
     for name in props:
         # cursor = db['pauling_file_min_tags'].find({'is_' + name + '_dataset': True})
         # df = pd.DataFrame(list(cursor))
         # df_feat = add_features(df)
-        # df_feat.to_pickle(name + '_feat.pkl')
         # df_cn = set_coordination(df_feat)
         # df_cn.to_pickle(name + '_cn.pkl')
         grouped_df, merged_df = group_merge_df(name)
         # merged_df.to_pickle(name + '_cn_merged.pkl')
         plot_violin(grouped_df, name)
-        plot_xy(merged_df, name)
+        # plot_xy(merged_df, name)
         # analyze_df(name)
         # plot_descs = ['coordination']
         # for plot_desc in plot_descs:
