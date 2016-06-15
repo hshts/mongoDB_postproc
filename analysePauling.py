@@ -248,6 +248,12 @@ def plot_xy(df, propname, descriptor=None):
             plt.ylabel('Space groups of excited states', fontsize=48)
             plt.xlim((0, 250))
             plt.ylim((0, 250))
+        elif pro == 'number_density':
+            plt.xlabel('Number density of ground states (/A^3)', fontsize=48)
+            plt.ylabel('Number density of excited states (/A^3)', fontsize=48)
+        elif pro == 'number_volume':
+            plt.xlabel('Number volume of ground states (A^3)', fontsize=48)
+            plt.ylabel('Number volume of excited states (A^3)', fontsize=48)
         if propname == 'hp':
             plt.title('HP and LP phases', fontsize=48)
         elif propname == 'ht':
@@ -263,7 +269,7 @@ def plot_xy(df, propname, descriptor=None):
 # TODO: Check how to set legends in plots (return them here and pass them onto plot_xy()
 class AddDescriptor:
     def __init__(self, propname):
-        self.df = pd.read_pickle(propname + '_NEWF_merged.pkl')
+        self.df = pd.read_pickle(propname + '_cn_merged.pkl')
         self.descriptor = ''
 
     def X(self):
@@ -412,15 +418,15 @@ if __name__ == '__main__':
         # df_feat = add_features(df)
         # df_cn = set_coordination(df_feat)
         # df_cn.to_pickle(name + '_cn.pkl')
-        grouped_df, merged_df = group_merge_df(name)
+        # grouped_df, merged_df = group_merge_df(name)
         # merged_df.to_pickle(name + '_cn_merged.pkl')
-        plot_violin(grouped_df, name)
-        plot_xy(merged_df, name)
+        # plot_violin(grouped_df, name)
+        # plot_xy(merged_df, name)
         # analyze_df(name)
-        # plot_descs = ['coordination']
-        # for plot_desc in plot_descs:
-        #     df_desc, desc = getattr(AddDescriptor(name), plot_desc)()
-        #     plot_xy(df_desc, name, desc)
+        plot_descs = ['X', 'is_magnetic']
+        for plot_desc in plot_descs:
+            df_desc, desc = getattr(AddDescriptor(name), plot_desc)()
+            plot_xy(df_desc, name, desc)
     '''
     big_df = pd.read_pickle('pauling_file_tags_ht.pkl')
     idxs = big_df.index.tolist()
