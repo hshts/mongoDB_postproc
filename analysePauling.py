@@ -206,14 +206,20 @@ def group_merge_df(prop):
 def plot_violin(df, propname):
     plot_props = ['space_group']
     # plot_props = ['space_group', 'density', 'number_density', 'number_volume']
-    df['is_' + propname] = df['is_' + propname].map({True: 'HT', False: 'RT'})
+    if propname == 'hp':
+        df['is_' + propname] = df['is_' + propname].map({True: 'HP', False: 'LP'})
+    elif propname == 'ht':
+        df['is_' + propname] = df['is_' + propname].map({True: 'HT', False: 'LT'})
     for pro in plot_props:
         sns.violinplot(x='is_' + propname + '_dataset', y=pro, hue='is_' + propname, data=df, palette='muted',
                        split=True)
         if pro == 'space_group':
             plt.xlabel('Number of compounds', fontsize=48)
             plt.ylabel('Space Group', fontsize=48)
-            plt.title('Space group distribution of RT and HT compounds', fontsize=48)
+            if propname == 'hp':
+                plt.title('Space group distribution of HP and LP compounds', fontsize=48)
+            elif propname == 'ht':
+                plt.title('Space group distribution of HT and LT compounds', fontsize=48)
             plt.yticks(fontsize=48)
             plt.ylim((-50, 300))
             plt.legend(title='', fontsize=48)
@@ -237,12 +243,17 @@ def plot_xy(df, propname, descriptor=None):
         else:
             color_column = df[descriptor]
             df.plot(x=pro + '_l' + propname[-1], y=pro + '_h' + propname[-1], kind='scatter', c=color_column)
-        plt.xlabel(pro + ' of ground states')
-        plt.ylabel(pro + ' of excited states')
+        if pro == 'space_group':
+            plt.xlabel('Space groups of ground states', fontsize=48)
+            plt.ylabel('Space groups of excited states', fontsize=48)
+            plt.xlim((0, 250))
+            plt.ylim((0, 250))
         if propname == 'hp':
-            plt.title('HP (high pressure) phases')
+            plt.title('HP and LP phases', fontsize=48)
         elif propname == 'ht':
-            plt.title('HT (high temeperature) phases')
+            plt.title('HT and LT phases', fontsize=48)
+        plt.xticks(fontsize=48)
+        plt.yticks(fontsize=48)
         plt.show()
         sns.set_style('whitegrid')
 
@@ -394,7 +405,7 @@ if __name__ == '__main__':
         set_hpht_tags(doc, 350, 450)
     # '''
     # set_hpht_dataset_tags()
-    props = ['ht']
+    props = ['hp', 'ht']
     for name in props:
         # cursor = db['pauling_file_min_tags'].find({'is_' + name + '_dataset': True})
         # df = pd.DataFrame(list(cursor))
@@ -404,7 +415,7 @@ if __name__ == '__main__':
         grouped_df, merged_df = group_merge_df(name)
         # merged_df.to_pickle(name + '_cn_merged.pkl')
         plot_violin(grouped_df, name)
-        # plot_xy(merged_df, name)
+        plot_xy(merged_df, name)
         # analyze_df(name)
         # plot_descs = ['coordination']
         # for plot_desc in plot_descs:
