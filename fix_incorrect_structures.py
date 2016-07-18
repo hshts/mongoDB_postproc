@@ -286,3 +286,53 @@ if __name__ == '__main__':
     print len(remove_keys)
     # for key in remove_keys:
     #     db['incorrect_structs'].remove({'key': key})
+
+    # Partial occupancy (maybe bracket?) labels (with incorrect label): "sd_0462521", "sd_0560149", "sd_1320784",
+    # "sd_1414947"
+    # Partial occupancy (bracket in symbol) labels (with incorrect label): "sd_1811457", "sd_1622133", "sd_1928405"
+    # Partial occupancy (maybe bracket?) labels (with correct label): "sd_1011081", "sd_1908491", "sd_1810366"
+    # Partial occupancy (bracket in label) labels (with incorrect label): "sd_1615854"
+    # Partial occupancy (maybe bracket?) labels (with incorrect label) and <sup>: "sd_1902347"
+    # (this one had comments in the original CIF)
+    # structural composition and refined/alphabetic formula do not match: "sd_1211858",
+    # "sd_1212949", "sd_1521691" (last two do not match compostion for unknown reasons - probably because
+    # of coordinate matching)
+    # Insufficient powder diffraction data: "sd_1704003", "sd_1002871"
+    # Unparsable species ("molecular species added as species X"): "sd_1500382", "sd_1601634" (found 2)
+    # (of course, structure and Springer formula don't match)
+    '''
+    # for doc in coll.find({'metadata._Springer.cif_string_old': {'$exists': True}}).skip(40).limit(10):
+    # for doc in coll.find({'errors': {'$in': ['structural composition and refined/alphabetic formula do not match']}})
+    .limit(10):
+    #     print doc['key']
+    #     fixed_keys.append(doc['key'])
+
+    # coll = db['pauling_file']
+    for doc in coll.find({'errors': {'$in': ['cif missing element data']}}).limit(1):
+        print doc['key']
+        print doc['cif_string']
+    for doc in coll.find({'errors': {'$in': ['cif missing one element data']}}).limit(1):
+        print doc['key']
+    for doc in coll.find({'errors': {'$in': ['incorrect occupancies in cif file']}}).limit(1):
+        print doc['key']
+        print doc.keys()
+        print doc['metadata']['_Springer'].keys()
+        # print doc['metadata']['_Springer']['cif_string_old']
+    '''
+    '''
+    for doc in coll.find({'key': {'$in': ['sd_1500382', 'sd_1601634']}}):
+    # for doc in coll.find({'key': {'$in': ['sd_0462521', 'sd_0560149', 'sd_1320784', 'sd_1414947', 'sd_1811457',
+    #     'sd_1622133', 'sd_1928405', 'sd_1011081', 'sd_1908491', 'sd_1810366', 'sd_1615854']}}):
+    # for doc in coll.find({'key': {'$in': ['sd_1002871', 'sd_1704003']}}):
+        print '--------'
+        print doc['key']
+        print doc['cif_string']
+        # print doc['metadata']['_Springer']['cif_string_old']
+        # struct = CifParser.from_string(doc['cif_string']).get_structures()[0]
+        for k in CifParser.from_string(doc['cif_string']).get_structures():
+            print k.formula
+        # struct_old = CifParser.from_string(doc['metadata']['_Springer']['cif_string_old']).get_structures()[0]
+        # print struct.formula
+        # print struct.composition
+        # print struct_old.formula
+    '''
