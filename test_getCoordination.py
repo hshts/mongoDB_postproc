@@ -83,6 +83,5 @@ class Testgetcoordination(unittest.TestCase):
             getcoordination(Structure.from_file('test_structures/Fe.cif'))), {'Fe': 8})
 
 
-
 if __name__ == '__main__':
     unittest.main()
